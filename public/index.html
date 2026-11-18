@@ -157,5 +157,67 @@ $("nav").addEventListener("click",e=>{const b=e.target.closest("button[data-page
 renderV2();
 </script>
 
+
+<script>
+(()=>{
+const dbName="modifyFilesDB";
+function openDB(){return new Promise((resolve,reject)=>{const q=indexedDB.open(dbName,1);q.onupgradeneeded=()=>q.result.createObjectStore("files",{keyPath:"id"});q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
+async function saveFiles(files){if(!files.length)return[];const db=await openDB();const out=[];for(const file of files){const id=crypto.randomUUID();await new Promise((res,rej)=>{const tx=db.transaction("files","readwrite");tx.objectStore("files").put({id,name:file.name,type:file.type,blob:file,added:new Date().toISOString()});tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});out.push({id,name:file.name,type:file.type,size:file.size})}db.close();return out}
+async function getFile(id){const db=await openDB();const item=await new Promise((res,rej)=>{const q=db.transaction("files").objectStore("files").get(id);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});db.close();return item}
+const jobOptions=()=> (records["Upcoming Jobs"]||[]).map(j=>({number:j["Job number"]||"",name:j["Job / project name"]||""}));
+const jobSelect=()=>'<option value="">Not linked to a job</option>'+jobOptions().map(j=>'<option value="'+escapeHtml(j.number)+'">'+escapeHtml(j.number+" — "+j.name)+'</option>').join("");
+fields["Vehicles"]=[
+["Vehicle make","text"],["Vehicle model","text"],["Registration number","text"],["VIN / chassis number","text"],["Current mileage","number"],["Vehicle type","text"],["Colour","text"],["Date acquired","date"],["V5C document reference","text"],["Road tax status","select:Taxed|SORN|Not known"],["Road tax due date","date"],["MOT expiry date","date"],["Last MOT date","date"],["Last service date","date"],["Next service due date","date"],["Next service due mileage","text"],["Insurance provider","text"],["Insurance policy number","text"],["Insurance renewal date","date"],["Breakdown cover renewal","date"],["Allocated to (employee / driver)","text"],["Usual base / allocated job","text"],["Fuel type","text"],["Notes","textarea"]
+];
+fields["Upcoming Jobs"]=[
+["Job number","text"],["Job / project name","text"],["Client","text"],["Site address","text"],["Job type","text"],["Start date","date"],["Expected finish date","date"],["Project manager","text"],["Status","select:Enquiry|Quoting|Won|Scheduled|Ready to start|In progress|On hold|Complete"],["Notes","textarea"]
+];
+fields["Job Materials"]=[
+["Job number","jobselect"],["Job / project","text"],["Material","text"],["Specification / quantity","text"],["Supplier","text"],["Required on site date","date"],["Delivery location / site contact","text"],["Order status","select:To price|To order|Ordered|Part delivered|Delivered|Cancelled"],["Purchase order reference","text"],["Notes","textarea"]
+];
+fields["Workers"]=[["Full name","text"],["Job role / trade","text"],["Mobile number","tel"],["Work email","email"],["Address","text"],["Date of birth (optional)","date"],["Emergency contact name","text"],["Emergency contact number","tel"],["Employment status","select:Employed|Subcontractor|Agency|Inactive"],["Notes","textarea"]];
+fields["Specialist Tooling"]=[["Tool / equipment name","text"],["Asset or serial number","text"],["Category","text"],["Condition","select:Good|Needs repair|Out of service"],["Current holder","text"],["Allocated job number","jobselect"],["Storage location","text"],["Last inspection date","date"],["Next inspection due","date"],["Notes","textarea"]];
+tableCols["Vehicles"]=["Vehicle make","Vehicle model","Registration number","Road tax status","Road tax due date","MOT expiry date","Next service due date","Allocated to (employee / driver)"];
+tableCols["Upcoming Jobs"]=["Job number","Job / project name","Client","Site address","Start date","Expected finish date","Project manager","Status"];
+tableCols["Job Materials"]=["Job number","Job / project","Material","Specification / quantity","Supplier","Required on site date","Order status","Purchase order reference"];
+tableCols["Workers"]=["Full name","Job role / trade","Mobile number","Work email","Employment status"];
+tableCols["Specialist Tooling"]=["Tool / equipment name","Asset or serial number","Current holder","Allocated job number","Condition","Next inspection due"];
+const originalOpen=openRecordForm;
+function newFieldHtml(item,i){
+ const [label,type]=item,id="f"+i;let input="";
+ if(type==="textarea")input='<textarea id="'+id+'"></textarea>';
+ else if(type==="file")input='<input id="'+id+'" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">';
+ else if(type==="jobselect")input='<select id="'+id+'">'+jobSelect()+'</select>';
+ else if(type.startsWith("select:"))input='<select id="'+id+'">'+type.slice(7).split("|").map(v=>'<option>'+escapeHtml(v)+'</option>').join("")+'</select>';
+ else input='<input id="'+id+'" type="'+type+'">';
+ return '<div class="field '+(type==="textarea"?"full":"")+'"><label for="'+id+'">'+escapeHtml(label)+'</label>'+input+'</div>';
+}
+window.openRecordForm=function(page){
+ const list=fields[page]||[["Name","text"],["Details","text"],["Status","select:Active|Pending|Complete"]];
+ const modal=$("modal");$("modalTitle").textContent="Add "+page;
+ modal.querySelector(".modal").innerHTML='<h2>Add '+escapeHtml(page)+'</h2><p class="helptext">You can attach photos or documents from your phone. Files stay in this browser in this preview version.</p><div class="fieldgrid">'+list.map(newFieldHtml).join("")+newFieldHtml(["Photos and documents (images, PDF, Word, Excel)","file"],"upload")+'</div><div class="modalfoot"><button class="btn" id="cancelNew">Cancel</button><button class="btn primary" id="saveNew">Save record</button></div>';
+ modal.classList.add("show");$("cancelNew").onclick=()=>modal.classList.remove("show");
+ $("saveNew").onclick=async()=>{const obj={};list.forEach((item,i)=>{const el=$("f"+i);obj[item[0]]=el.value.trim()});if(!Object.values(obj).some(Boolean))return;const files=[...$("fupload").files];try{obj.attachments=await saveFiles(files)}catch(e){alert("Could not save attachments on this device. Try fewer or smaller files.");return}records[page]=records[page]||[];records[page].push(obj);localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");renderV2()};
+};
+window.renderV2=function(){
+ $("title").textContent=current==="Dashboard"?"Management overview":current;
+ $("subtitle").textContent=current==="Dashboard"?"A clear view of your workforce, fleet, tools and work pipeline.":"Add and maintain "+current.toLowerCase()+".";
+ $("crumb").textContent=current;const body=$("pagebody");
+ if(current==="Dashboard"){ 
+ const counts=[["Upcoming jobs",records["Upcoming Jobs"].length],["Workers",records.Workers.length],["Vehicles",records.Vehicles.length],["Specialist tools",records["Specialist Tooling"].length]];
+ body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · MANAGEMENT</div><div class="stats">'+counts.map(x=>'<div class="card"><div class="statlabel">'+x[0]+'</div><div class="statvalue">'+x[1]+'</div><div class="statnote">Records entered</div></div>').join("")+'</div><div class="columns"><div class="card"><div class="cardhead"><h2>Upcoming work</h2><button class="smallaction" data-goto="Upcoming Jobs">View list →</button></div>'+(records["Upcoming Jobs"].length?records["Upcoming Jobs"].slice(0,5).map(x=>'<div class="job"><div><div class="jobname">'+escapeHtml(x["Job number"]||"Job number needed")+' · '+escapeHtml(x["Job / project name"]||"Untitled job")+'</div><div class="jobmeta">'+escapeHtml(x["Site address"]||"Site not entered")+' · '+escapeHtml(x["Start date"]||"Start date TBC")+'</div></div><span class="pill">'+escapeHtml(x.Status||"Unscheduled")+'</span></div>').join(""):'<div class="empty">No jobs entered yet. Add your real upcoming jobs to get started.</div>')+'</div><div class="card"><div class="cardhead"><h2>Quick access</h2></div>'+["Workers","Vehicles","Specialist Tooling","Job Materials"].map(x=>'<div class="task"><span class="dot"></span><div><strong>'+x+'</strong><small>'+records[x].length+' records</small></div></div>').join("")+'</div></div>';
+ body.querySelectorAll("[data-goto]").forEach(b=>b.onclick=()=>{current=b.dataset.goto;renderV2()});$("add").style.display="none";
+ }else{
+ $("add").style.display="inline-block";const list=records[current]||[],cols=tableCols[current]||Object.keys(list[0]||{Name:"",Details:"",Status:""});
+ body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · '+escapeHtml(current.toUpperCase())+'</div><div class="toolbar"><input id="searchV2" placeholder="Search '+escapeHtml(current.toLowerCase())+'..."></div><div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+escapeHtml(c)+'</th>').join("")+'<th>Files</th></tr></thead><tbody>'+list.map((row,i)=>'<tr>'+cols.map(c=>'<td>'+escapeHtml(row[c]||"—")+'</td>').join("")+'<td>'+(row.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</td></tr>').join("")+'</tbody></table>'+(list.length?"":'<div class="empty">No records yet. Select “Add new” to enter your first record.</div>')+'</div>';
+ body.querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{const file=await getFile(b.dataset.file);if(!file)return;const url=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=url;a.download=file.name;a.target="_blank";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)});
+ $("searchV2").oninput=e=>{const q=e.target.value.toLowerCase();body.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")};
+ }
+};
+$("add").onclick=()=>openRecordForm(current);
+renderV2();
+})();
+</script>
+
 </body>
 </html>
