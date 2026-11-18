@@ -176,6 +176,59 @@ async function handleApi(request, env) {
     const { results } = await env.DB.prepare("SELECT id, full_name AS name, staff_code AS staffCode, role, active FROM users ORDER BY full_name").all();
     return json({ users: results });
   }
+
+  if (url.pathname === "/api/jobs" && request.method === "GET") {
+    if (!can(session.role, "jobs:read") && session.role !== "employee") return json({error:"Not authorised."},403);
+    let rows;
+    if (session.role === "employee") {
+      rows = await env.DB.prepare("SELECT j.* FROM jobs j JOIN job_assignments a ON a.job_number=j.job_number WHERE a.user_id=? ORDER BY j.updated_at DESC").bind(session.user_id).all();
+    } else {
+      rows = await env.DB.prepare("SELECT * FROM jobs ORDER BY updated_at DESC").all();
+    }
+    return json({jobs:rows.results||[]});
+  }
+  if (url.pathname === "/api/jobs" && request.method === "POST") {
+    if (!can(session.role, "jobs:write")) return json({error:"You do not have permission to create jobs."},403);
+    const input=await body(request);
+    const fields=["jobNumber","projectName","client","siteAddress","jobType","startDate","expectedFinishDate","projectManager","status","notes"];
+    if (!input || fields.some(k=>input[k]!==undefined&&typeof input[k]!=="string") || !input.jobNumber?.trim() || !input.projectName?.trim()) return json({error:"Enter a job number and project name."},400);
+    const values=fields.map(k=>String(input[k]||"").trim());
+    if(values.some(v=>v.length>1000)||values[0].length>80||values[1].length>160) return json({error:"One or more job fields are too long."},400);
+    const now=Math.floor(Date.now()/1000);
+    try {
+      await env.DB.prepare("INSERT INTO jobs (job_number,project_name,client,site_address,job_type,start_date,expected_finish_date,project_manager,status,notes,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+        .bind(values[0],values[1],values[2],values[3],values[4],values[5],values[6],values[7],values[8]||"Enquiry",values[9],session.user_id,now,now).run();
+    } catch { return json({error:"That job number already exists."},409); }
+    await audit(env,session,"job_created",values[0]);
+    return json({jobNumber:values[0]},201);
+  }
+  const jobMatch=url.pathname.match(/^\/api\/jobs\/([^/]+)$/);
+  if(jobMatch&&request.method==="PATCH"){
+    if(!can(session.role,"jobs:write"))return json({error:"You do not have permission to edit jobs."},403);
+    const jobNumber=decodeURIComponent(jobMatch[1]),input=await body(request);
+    const allowed={projectName:"project_name",client:"client",siteAddress:"site_address",jobType:"job_type",startDate:"start_date",expectedFinishDate:"expected_finish_date",projectManager:"project_manager",status:"status",notes:"notes"};
+    if(!input||Object.keys(input).some(k=>!allowed[k]||typeof input[k]!=="string"||input[k].length>3000))return json({error:"Invalid job changes."},400);
+    const entries=Object.entries(input);
+    if(!entries.length)return json({error:"No changes supplied."},400);
+    const set=entries.map(([k])=>allowed[k]+"=?").join(",");
+    const result=await env.DB.prepare("UPDATE jobs SET "+set+",updated_at=? WHERE job_number=?").bind(...entries.map(([,v])=>v.trim()),Math.floor(Date.now()/1000),jobNumber).run();
+    if(!result.meta?.changes)return json({error:"Job not found."},404);
+    await audit(env,session,"job_updated",jobNumber);
+    return json({ok:true});
+  }
+  if(jobMatch&&request.method==="GET"){
+    if(!can(session.role,"jobs:read")&&session.role!=="employee")return json({error:"Not authorised."},403);
+    const jobNumber=decodeURIComponent(jobMatch[1]);
+    if(session.role==="employee"){
+      const assigned=await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id,jobNumber).first();
+      if(!assigned)return json({error:"Not authorised."},403);
+    }
+    const job=await env.DB.prepare("SELECT * FROM jobs WHERE job_number=?").bind(jobNumber).first();
+    if(!job)return json({error:"Job not found."},404);
+    const updates=await env.DB.prepare("SELECT j.*,u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by WHERE j.job_number=? ORDER BY j.created_at DESC LIMIT 200").bind(jobNumber).all();
+    const assignments=await env.DB.prepare("SELECT a.user_id,a.job_number,u.full_name,u.staff_code FROM job_assignments a JOIN users u ON u.id=a.user_id WHERE a.job_number=? ORDER BY u.full_name").bind(jobNumber).all();
+    return json({job,updates:updates.results||[],assignments:assignments.results||[]});
+  }
   if (url.pathname === "/api/job-updates" && request.method === "GET") {
     if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." }, 403);
     let result;
