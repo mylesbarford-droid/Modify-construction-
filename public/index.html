@@ -452,6 +452,8 @@ window.renderV2=function(){
  $("docCategoryFilter").onchange=e=>{window.modifyDocsFilter=e.target.value;renderV2()};
  $("searchV2").oninput=e=>{const q=e.target.value.toLowerCase();body.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")};
  body.querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{try{const file=await window.getModifyStoredFile(b.dataset.file);if(!file||!file.blob){alert("This file is not available in this browser. It may have been uploaded on another device.");return}const url=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}catch(err){alert("Could not open this file in the current browser.")}});
+ return;
+ }
 
  $("add").style.display="inline-block";const list=records[current]||[],cols=tableCols[current]||Object.keys(list[0]||{Name:"",Details:"",Status:""});
  body.innerHTML='<div class="watermark"><img class="section-logo" src="/logo.jpg" alt="MODIFY Construction"> MODIFY CONSTRUCTION · '+escapeHtml(current.toUpperCase())+'</div><div class="toolbar"><input id="searchV2" placeholder="Search '+escapeHtml(current.toLowerCase())+'..."></div><div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+escapeHtml(c)+'</th>').join("")+'<th>Files</th></tr></thead><tbody>'+list.map((row,i)=>'<tr>'+cols.map(c=>'<td>'+escapeHtml(row[c]||"—")+'</td>').join("")+'<td>'+(row.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</td></tr>').join("")+'</tbody></table>'+(list.length?"":'<div class="empty">No records yet. Select “Add new” to enter your first record.</div>')+'</div>';
