@@ -571,5 +571,33 @@ renderV2();
 })();
 </script>
 
+
+<script id="modify-navigation-recovery">
+(function(){
+ function go(page){
+  if(!page)return;
+  try{
+   if(typeof current!=="undefined")current=page;
+   document.querySelectorAll("#nav button[data-page]").forEach(function(b){b.classList.toggle("active",b.dataset.page===page)});
+   var side=document.getElementById("sidebar");if(side)side.classList.remove("open");
+   var heading=document.getElementById("title");if(heading)heading.textContent=page==="Dashboard"?"Management overview":page;
+   var crumb=document.getElementById("crumb");if(crumb)crumb.textContent=page;
+   if(typeof window.renderV2==="function"){window.renderV2();return}
+   if(typeof render==="function"){render();return}
+   throw new Error("No page renderer is available");
+  }catch(err){
+   console.error("MODIFY navigation error:",err);
+   var body=document.getElementById("pagebody");
+   if(body)body.innerHTML='<div class="card" style="padding:20px"><h2>Page could not load</h2><p>The navigation responded, but this section failed to render.</p><p style="font-size:12px;opacity:.7">'+String(err&&err.message||err).replace(/[<>&]/g,"")+'</p><button type="button" onclick="location.reload()">Reload MODIFY</button></div>';
+  }
+ }
+ document.addEventListener("click",function(e){
+  var nav=e.target.closest("#nav button[data-page]");
+  var tile=e.target.closest("[data-goto]");
+  if(nav){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();go(nav.dataset.page)}
+  else if(tile){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();go(tile.dataset.goto)}
+ },true);
+})();
+</script>
 </body>
 </html>
