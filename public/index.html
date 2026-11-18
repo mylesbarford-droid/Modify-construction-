@@ -277,8 +277,7 @@ render();
 <script>
 /* MODIFY v2: clean operational registers; no invented company records */
 const savedModifyRecordsV2=(()=>{try{return JSON.parse(localStorage.getItem("modifyRecordsV2")||"null")}catch(e){return null}})();
-/* Consolidate the former Jobs & Sites register into the single Jobs & Sites master register. */
-if(savedModifyRecordsV2&&Array.isArray(savedModifyRecordsV2["Jobs & Sites"])){const master=Array.isArray(records["Jobs & Sites"])?records["Jobs & Sites"]:[];const known=new Set(master.map(j=>String(j["Job number"]||"")+"|"+String(j["Job / project name"]||"").toLowerCase()));savedModifyRecordsV2["Jobs & Sites"].forEach(j=>{const key=String(j["Job number"]||"")+"|"+String(j["Job / project name"]||"").toLowerCase();if(!known.has(key)){master.push(j);known.add(key)}});records["Jobs & Sites"]=master;delete records["Jobs & Sites"];localStorage.setItem("modifyRecordsV2",JSON.stringify(records))}
+
 records=savedModifyRecordsV2&&typeof savedModifyRecordsV2==="object"?savedModifyRecordsV2:{
 "Jobs & Sites":[],
 "Money":[],
@@ -319,6 +318,9 @@ const tableCols={
 };
 /* Guard register collections before any page renders. */
 ["Workforce","Workers","Vehicles","Specialist Tooling","Jobs & Sites","Job Materials","Money","Job Updates","Jobs & Sites","Plant & Equipment","Staff & Subcontractors","Health & Safety","Documents","Suppliers & Materials"].forEach(k=>{if(!Array.isArray(records[k]))records[k]=[]});
+/* Consolidate user-entered records from the former Upcoming Jobs register. */
+if(savedModifyRecordsV2&&Array.isArray(savedModifyRecordsV2["Upcoming Jobs"])){const master=records["Jobs & Sites"];const known=new Set(master.map(j=>String(j["Job number"]||"")+"|"+String(j["Job / project name"]||"").toLowerCase()));savedModifyRecordsV2["Upcoming Jobs"].forEach(j=>{const key=String(j["Job number"]||"")+"|"+String(j["Job / project name"]||"").toLowerCase();if(!known.has(key)){master.push(j);known.add(key)}});delete records["Upcoming Jobs"];localStorage.setItem("modifyRecordsV2",JSON.stringify(records))}
+
 const esc=escapeHtml;
 function fieldHtml(item,i){const [label,type]=item;const id="f"+i;let input;
 if(type==="textarea")input='<textarea id="'+id+'" name="'+esc(label)+'" rows="5" placeholder="Enter details here..."></textarea>';
