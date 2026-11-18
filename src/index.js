@@ -122,7 +122,7 @@ async function handleApi(request, env) {
     if (session.role !== "administrator") return json({ error: "Only the administrator can create staff accounts." }, 403);
     const input = await body(request);
     const roles = ["office_manager", "site_manager", "employee"];
-    if (!input || typeof input.name !== "string" || typeof input.staffCode !== "string" || !/^\\d{6}$/.test(input.pin || "") || !roles.includes(input.role)) return json({ error: "Enter a name, staff code, six-digit PIN and valid role." }, 400);
+    if (!input || typeof input.name !== "string" || typeof input.staffCode !== "string" || !/^\d{6}$/.test(input.pin || "") || !roles.includes(input.role)) return json({ error: "Enter a name, staff code, six-digit PIN and valid role." }, 400);
     const name = input.name.trim().slice(0, 100), staffCode = input.staffCode.trim().slice(0, 40);
     if (!name || !/^[a-zA-Z0-9_-]{2,40}$/.test(staffCode)) return json({ error: "Use a staff code with 2–40 letters, numbers, hyphens or underscores." }, 400);
     const existing = await env.DB.prepare("SELECT 1 FROM users WHERE lower(staff_code)=lower(?)").bind(staffCode).first();
