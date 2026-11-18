@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 150" role="img" aria-labelledby="title desc">
+<title id="title">MODIFY Construction</title><desc id="desc">MODIFY Construction company wordmark in gold and white</desc>
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5df9d"/><stop offset=".52" stop-color="#d1ad59"/><stop offset="1" stop-color="#98712d"/></linearGradient></defs>
+<g fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="square" stroke-linejoin="miter">
+<path d="M24 112V35l43 48 43-48v77"/><path d="M130 112V35l43 48 43-48v77"/>
+<path d="M242 112V35h42c28 0 43 15 43 38s-15 39-43 39z"/>
+</g>
+<text x="358" y="88" font-family="Arial,Helvetica,sans-serif" font-size="64" font-weight="800" letter-spacing="5" fill="#f6f2e9">MODIFY</text>
+<path d="M360 108H620" stroke="url(#g)" stroke-width="4"/>
+<text x="361" y="137" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" letter-spacing="7" fill="#d1ad59">CONSTRUCTION</text>
+</svg>
