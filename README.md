@@ -20,7 +20,7 @@ Roles:
 
 ### Required Cloudflare setup
 
-1. Create a Cloudflare D1 database and apply `migrations/0001_auth.sql` followed by `migrations/0002_job_updates.sql`.
+1. Create a Cloudflare D1 database and apply `migrations/0001_auth.sql`, `migrations/0002_job_updates.sql`, then `migrations/0003_jobs.sql`.
 2. Add a D1 binding named `DB` to the Worker, pointing to that database.
 3. Create a **private** Cloudflare R2 bucket for job photos and bind it to the Worker as `JOB_PHOTOS`. Do not enable public bucket access.
 4. Add Worker secrets named `COMPANY_LOGIN_PASSWORD` and `BOOTSTRAP_KEY`. Use different, long random values.
@@ -41,3 +41,16 @@ The initial administrator is created once only. Further staff provisioning and r
 **This is not yet a production-ready shared company system.** The existing dashboard still reads and writes its demonstration records in browser `localStorage`; this branch does not migrate those records into D1 or connect the dashboard screens to these authenticated APIs. Do not enter real company records or rely on these role permissions to protect the existing dashboard until that integration, private file storage, backups, and end-to-end tests are completed.
 
 The original preview used browser-local storage, which is not shared between staff or devices.
+
+
+## Central Jobs & Sites register (new integration work)
+
+The shared app now uses D1 as the source of truth for the Jobs & Sites register:
+- `GET /api/jobs` lists all jobs for managers and only assigned jobs for employees.
+- `POST /api/jobs` creates a centrally stored job (manager permissions required).
+- `GET /api/jobs/:jobNumber` returns the job, its site diary history and assigned staff.
+- `PATCH /api/jobs/:jobNumber` updates job details (manager permissions required).
+- Job updates must reference a job already in the central register.
+- The Jobs & Sites screen has a one-time import action for old job records found in that browser local storage. Existing job numbers are not overwritten.
+
+**Migration required:** apply `migrations/0003_jobs.sql` to the configured D1 database before deploying this version. This migration has not been applied to the live Cloudflare database from this workspace. Materials, documents, money, workforce and photo attachments are not yet fully migrated into central storage; do not treat this as complete production integration.
