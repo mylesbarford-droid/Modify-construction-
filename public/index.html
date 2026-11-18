@@ -280,5 +280,61 @@ renderV2();
 })();
 </script>
 
+
+<script>
+(()=>{
+ records.Money=records.Money||[];
+ fields.Money=[
+ ["Record type","select:Customer invoice|Customer payment|Supplier invoice|Supplier payment|Purchase order|Expense|Variation|Credit note"],
+ ["Job number","jobselect"],["Description","text"],["Customer / supplier","text"],
+ ["Reference / invoice / PO number","text"],["Date","date"],["Due date","date"],
+ ["Net amount (£)","number"],["VAT rate (%)","select:0|5|20"],["Status","select:Draft|Awaiting approval|Issued|Part paid|Paid|Overdue|Cancelled"],
+ ["Payment date","date"],["Payment method","select:Bank transfer|Card|Cash|Direct debit|Other"],
+ ["Cost category","select:Labour|Materials|Plant hire|Subcontractor|Fuel|Vehicle|Tools|Insurance|Overheads|Other"],
+ ["Notes","textarea"]
+ ];
+ tableCols.Money=["Record type","Job number","Description","Customer / supplier","Reference / invoice / PO number","Date","Due date","Net amount (£)","Status"];
+ const priorOpen=window.openRecordForm;
+ window.openRecordForm=function(page){
+  if(page!=="Money")return priorOpen(page);
+  const list=fields.Money,modal=$("modal");
+  modal.querySelector(".modal").innerHTML='<h2>Add money record</h2><p class="helptext">Record invoices, payments, purchase orders, variations and expenses against a job number. Attachments can be added after the financial record is saved.</p><div class="fieldgrid">'+list.map((item,i)=>{
+   const [label,type]=item,id="f"+i;let input;
+   if(type==="textarea")input='<textarea id="'+id+'"></textarea>';
+   else if(type==="jobselect")input='<select id="'+id+'">'+jobSelect()+'</select>';
+   else if(type.startsWith("select:"))input='<select id="'+id+'">'+type.slice(7).split("|").map(v=>'<option>'+escapeHtml(v)+'</option>').join("")+'</select>';
+   else input='<input id="'+id+'" type="'+type+'" '+(type==="number"?'min="0" step="0.01"':'')+'>';
+   return '<div class="field '+(type==="textarea"?"full":"")+'"><label for="'+id+'">'+escapeHtml(label)+'</label>'+input+'</div>';
+  }).join("")+'</div>'+newFieldHtml(["Supporting documents (invoice, receipt, quote)","file"],"upload")+'<div class="modalfoot"><button class="btn" id="cancelMoney">Cancel</button><button class="btn primary" id="saveMoney">Save record</button></div>';
+  modal.classList.add("show");$("cancelMoney").onclick=()=>modal.classList.remove("show");
+  $("saveMoney").onclick=async()=>{
+   const obj={};list.forEach((it,i)=>obj[it[0]]=$("f"+i).value.trim());
+   if(!obj.Description||!obj["Net amount (£)"]){alert("Please enter a description and amount.");return}
+   obj["VAT amount (£)"]=(Number(obj["Net amount (£)"])*Number(obj["VAT rate (%)"])/100).toFixed(2);
+   obj["Gross amount (£)"]=(Number(obj["Net amount (£)"])+Number(obj["VAT amount (£)"])).toFixed(2);
+   let attachments=[];try{attachments=await saveFiles([...$("fupload").files])}catch(e){alert("Could not save attachments.");return}
+   obj.attachments=attachments;records.Money.push(obj);localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");renderV2();
+  };
+ };
+ const priorRender=window.renderV2;
+ window.renderV2=function(){
+  if(current!=="Money")return priorRender();
+  $("title").textContent="Money & job costing";$("subtitle").textContent="Track income, costs, invoices, purchase orders and profitability by job.";$("crumb").textContent=current;$("add").style.display="inline-block";
+  const list=records.Money||[],sum=(fn)=>list.filter(fn).reduce((a,x)=>a+Number(x["Gross amount (£)"]||x["Net amount (£)"]||0),0);
+  const incoming=sum(x=>["Customer invoice","Customer payment"].includes(x["Record type"])&&x.Status!=="Cancelled");
+  const costs=sum(x=>["Supplier invoice","Supplier payment","Expense","Purchase order"].includes(x["Record type"])&&x.Status!=="Cancelled");
+  const outstanding=sum(x=>["Customer invoice"].includes(x["Record type"])&&!["Paid","Cancelled"].includes(x.Status));
+  const fmt=n=>n.toLocaleString("en-GB",{style:"currency",currency:"GBP"});
+  const cols=tableCols.Money;
+  $("pagebody").innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · FINANCE</div><div class="stats"><div class="card"><div class="statlabel">Income recorded</div><div class="statvalue">'+fmt(incoming)+'</div><div class="statnote">Invoices and payments entered</div></div><div class="card"><div class="statlabel">Costs recorded</div><div class="statvalue">'+fmt(costs)+'</div><div class="statnote">Supplier invoices, POs and expenses</div></div><div class="card"><div class="statlabel">Customer invoices outstanding</div><div class="statvalue">'+fmt(outstanding)+'</div><div class="statnote">Unpaid invoice gross values</div></div><div class="card"><div class="statlabel">Net recorded difference</div><div class="statvalue">'+fmt(incoming-costs)+'</div><div class="statnote">Indicative only, not an accounting profit figure</div></div></div><div class="card" style="margin-bottom:14px"><div class="cardhead"><h2>Job financial summary</h2><span class="muted">Grouped by job number</span></div>'+((records["Upcoming Jobs"]||[]).map(j=>{const r=list.filter(x=>x["Job number"]===j["Job number"]);const inc=r.filter(x=>["Customer invoice","Customer payment"].includes(x["Record type"])).reduce((a,x)=>a+Number(x["Gross amount (£)"]||0),0);const out=r.filter(x=>["Supplier invoice","Supplier payment","Expense","Purchase order"].includes(x["Record type"])).reduce((a,x)=>a+Number(x["Gross amount (£)"]||0),0);return '<div class="job"><div><div class="jobname">'+escapeHtml(j["Job number"]||"No job number")+' · '+escapeHtml(j["Job / project name"]||"")+'</div><div class="jobmeta">Income '+fmt(inc)+' · Costs '+fmt(out)+'</div></div><span class="pill">'+fmt(inc-out)+'</span></div>'}).join("")||'<div class="empty">Create jobs with job numbers to see project costing here.</div>')+'</div><div class="cardhead"><h2>Financial records</h2><span class="muted">'+list.length+' records</span></div><div class="toolbar"><input id="moneySearch" placeholder="Search invoices, suppliers, job numbers..."></div><div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+escapeHtml(c)+'</th>').join("")+'<th>Files</th></tr></thead><tbody>'+list.map(x=>'<tr>'+cols.map(c=>'<td>'+escapeHtml(c==="Net amount (£)"?fmt(Number(x[c]||0)):x[c]||"—")+'</td>').join("")+'<td>'+(x.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</td></tr>').join("")+'</tbody></table>'+(list.length?"":'<div class="empty">No financial records yet. Use Add new to record your first invoice, cost or purchase order.</div>')+'</div><p class="helptext">Standalone management register only. VAT returns, bank reconciliation, statutory accounts and tax calculations are not provided. Purchase orders are commitments and should not be treated as paid costs until invoiced.</p>';
+  $("moneySearch").oninput=e=>{const q=e.target.value.toLowerCase();$("pagebody").querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")};
+  $("pagebody").querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{const file=await getFile(b.dataset.file);if(file){const u=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=u;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}});
+ };
+ const nav=document.getElementById("nav");
+ nav.addEventListener("click",e=>{const b=e.target.closest('button[data-page="Money"]');if(b){current="Money";nav.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");renderV2()}});
+ if(current==="Money")renderV2();
+})();
+</script>
+
 </body>
 </html>
