@@ -48,5 +48,12 @@
     $("#staff-create").onclick=async()=>{try{await api("/api/auth/users",{method:"POST",body:JSON.stringify({name:$("#staff-name").value,staffCode:$("#staff-code").value,pin:$("#staff-pin").value,role:$("#staff-role").value})});$("#staff-message").textContent="Staff account created. Give the staff code and PIN to the employee securely.";$("#staff-name").value=$("#staff-code").value=$("#staff-pin").value="";await load()}catch(e){$("#staff-message").textContent=e.message}};
     $("#staff-assign").onclick=async()=>{try{await api("/api/job-assignments",{method:"POST",body:JSON.stringify({userId:$("#assign-user").value,jobNumber:$("#assign-job").value})});$("#staff-message").textContent="Job assignment saved.";$("#assign-job").value=""}catch(e){$("#staff-message").textContent=e.message}};await load();
   }
+  const originalRenderV2=window.renderV2;
+  if(typeof originalRenderV2==="function"){
+    window.renderV2=function(){
+      if($("#crumb")?.textContent==="Job Updates"){renderJobUpdates();return}
+      return originalRenderV2.apply(this,arguments);
+    };
+  }
   boot();
 })();
