@@ -158,6 +158,8 @@ async function handleApi(request, env) {
     const user = await env.DB.prepare("SELECT id,role FROM users WHERE id=? AND active=1").bind(input.userId).first();
     if (!user || user.role !== "employee") return json({error:"Choose an active employee account."},400);
     const jobNumber=input.jobNumber.trim().slice(0,80);
+    const jobExists=await env.DB.prepare("SELECT 1 AS ok FROM jobs WHERE job_number=?").bind(jobNumber).first();
+    if(!jobExists)return json({error:"Create the job in Jobs & Sites before assigning staff."},400);
     await env.DB.prepare("INSERT OR IGNORE INTO job_assignments (user_id,job_number,created_at) VALUES (?,?,?)").bind(user.id,jobNumber,Math.floor(Date.now()/1000)).run();
     await audit(env,session,"job_assigned",user.id+":"+jobNumber);
     return json({ok:true},201);
@@ -251,13 +253,15 @@ async function handleApi(request, env) {
     const required = ["jobNumber", "stage", "status", "workType", "issue", "nextAction"];
     if (!input || required.some(k => typeof input[k] !== "string" || !input[k].trim()) || input.note !== undefined && typeof input.note !== "string") return json({ error: "Complete all required job update selections." }, 400);
     if (input.jobNumber.length > 80 || input.jobName?.length > 160 || input.note?.length > 3000) return json({ error: "One or more fields are too long." }, 400);
+    const linkedJob=await env.DB.prepare("SELECT project_name FROM jobs WHERE job_number=?").bind(input.jobNumber.trim()).first();
+    if(!linkedJob)return json({error:"Choose a job from the shared Jobs & Sites register."},400);
     if (session.role === "employee") {
       const assigned = await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id, input.jobNumber).first();
       if (!assigned) return json({ error: "You can only update jobs assigned to you." }, 403);
     }
     const id = randomToken(16), now = Math.floor(Date.now()/1000);
     await env.DB.prepare("INSERT INTO job_updates (id,job_number,job_name,stage,status,work_type,issue,next_action,note,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-      .bind(id,input.jobNumber.trim(),String(input.jobName||"").slice(0,160),input.stage.trim().slice(0,80),input.status.trim().slice(0,80),input.workType.trim().slice(0,80),input.issue.trim().slice(0,120),input.nextAction.trim().slice(0,120),String(input.note||"").slice(0,3000),session.user_id,now).run();
+      .bind(id,input.jobNumber.trim(),String(linkedJob.project_name).slice(0,160),input.stage.trim().slice(0,80),input.status.trim().slice(0,80),input.workType.trim().slice(0,80),input.issue.trim().slice(0,120),input.nextAction.trim().slice(0,120),String(input.note||"").slice(0,3000),session.user_id,now).run();
     await audit(env, session, "job_update_created", id);
     return json({ id, reviewStatus: "pending", createdAt: now }, 201);
   }
