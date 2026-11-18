@@ -244,13 +244,14 @@ function render(){
  $("title").textContent=current==="Dashboard"?"Good afternoon":current;
  $("subtitle").textContent=current==="Dashboard"?"Here’s what’s happening across your projects today.":"View and update your "+current.toLowerCase()+" records.";
  $("crumb").textContent=current;
- if(current==="Dashboard"){$("pagebody").innerHTML=dashboard();$("add").style.display="none";return}
+ if(current==="Dashboard"){$("pagebody").innerHTML=dashboard()+'<div class="card quick-access-card"><div class="cardhead"><h2>Quick access</h2></div>'+["Workers","Vehicles","Specialist Tooling","Job Materials","Upcoming Jobs"].map(x=>'<button type="button" class="quicktile" data-goto="'+escapeHtml(x)+'"><span class="dot"></span><span class="quicktiletext"><strong>'+escapeHtml(x)+'</strong><small>'+((records[x]||[]).length)+' records</small></span><span class="quickarrow">→</span></button>').join("")+'</div>';$("add").style.display="none";return}
  $("add").style.display="inline-block";
  const list=records[current]||[];
  $("pagebody").innerHTML='<div class="toolbar"><input id="search" placeholder="Search '+current.toLowerCase()+'..." /></div><div class="tablewrap"><table><thead><tr><th>Name</th><th>Details</th><th>Status</th></tr></thead><tbody>'+list.map(x=>'<tr><td><strong>'+escapeHtml(x.name)+'</strong></td><td>'+escapeHtml(x.detail)+'</td><td><span class="'+statusClass(x.status)+'">'+escapeHtml(x.status)+'</span></td></tr>').join('')+'</tbody></table>'+(list.length?'':'<div class="empty">No records yet. Use “Add new” to create your first record.</div>')+'</div>';
  $("search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();document.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")});
 }
-$("nav").addEventListener("click",e=>{const b=e.target.closest("button[data-page]");if(!b)return;current=b.dataset.page;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");render()});
+$("nav").addEventListener("click",e=>{const b=e.target.closest("button[data-page]");if(!b)return;current=b.dataset.page;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");renderV2()});
+document.addEventListener("click",e=>{const tile=e.target.closest("[data-goto]");if(!tile)return;e.preventDefault();current=tile.dataset.goto;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===current));$("sidebar").classList.remove("open");renderV2()},true);
 $("menu").onclick=()=>$("sidebar").classList.toggle("open");
 $("add").onclick=()=>{$("modalTitle").textContent="Add to "+current;$("recordName").value="";$("recordDetail").value="";$("recordStatus").value="Active";$("modal").classList.add("show")};
 $("cancel").onclick=()=>$("modal").classList.remove("show");
