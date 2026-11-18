@@ -33,7 +33,7 @@
   function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>'+esc(currentUser.name)+' · '+esc(currentUser.role.replaceAll("_"," "))+'</span><button id="modify-staff-open" type="button">Staff & assignments</button><button id="modify-logout" type="button">Sign out</button>';const staff=$("#modify-staff-open");if(staff)staff.style.display=currentUser.role==="administrator"||currentUser.role==="office_manager"?"":"none";$("#modify-logout")?.addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"})}catch{}location.reload()});staff?.addEventListener("click",openStaffPanel)}
   const moduleMap={
     "Money":"money","Plant & Equipment":"plant","Vehicles":"vehicles","Workforce":"workforce",
-    "Workers":"workforce","Staff & Subcontractors":"workforce","Health & Safety":"safety",
+    "Health & Safety":"safety",
     "Documents":"documents","Suppliers & Materials":"suppliers","Job Materials":"materials",
     "Specialist Tooling":"tooling","Timesheets":"timesheets","Daily Reports":"daily_reports"
   };
@@ -56,8 +56,8 @@
       const state=raw?JSON.parse(raw):{};
       const permitted={
         administrator:Object.keys(moduleMap),
-        office_manager:["Money","Documents","Suppliers & Materials","Job Materials","Workforce","Staff & Subcontractors"],
-        site_manager:["Plant & Equipment","Vehicles","Workforce","Staff & Subcontractors","Health & Safety","Documents","Specialist Tooling"],
+        office_manager:["Money","Documents","Suppliers & Materials","Job Materials","Workforce"],
+        site_manager:["Plant & Equipment","Vehicles","Workforce","Health & Safety","Documents","Specialist Tooling"],
         employee:["Timesheets","Daily Reports"]
       }[currentUser.role]||[];
       for(const page of permitted){
