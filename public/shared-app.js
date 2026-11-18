@@ -43,7 +43,7 @@
   function moduleJobNumber(record){
     const direct=record["Job number"]||record.jobNumber||record.job_number;
     if(direct)return String(direct);
-    const name=String(record["Job / project"]||record["Allocated job / site"]||record["Location / allocated job"]||"").trim().toLowerCase();
+    const name=String(record["Job / project"]||record["Job / project name"]||record["Allocated job / site"]||record["Location / allocated job"]||record["Project"]||"").trim().toLowerCase();
     if(!name)return "";
     const job=sharedJobs.find(j=>String(j.project_name||"").trim().toLowerCase()===name);
     return job?.job_number||"";
