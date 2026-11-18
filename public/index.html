@@ -292,7 +292,7 @@ try{const legacy=JSON.parse(localStorage.getItem("modifyRecords")||"{}")||{};con
 const extraPages=["Workforce","Specialist Tooling","Upcoming Jobs","Job Materials"];
 extraPages.forEach((p)=>{if(!document.querySelector('[data-page="'+p+'"]')){const b=document.createElement("button");b.dataset.page=p;b.innerHTML='<span class="ico">✦</span>'+p;document.getElementById("nav").appendChild(b)}});
 const fields={
-"Workforce":[["Full name","text"],["Worker type","select:Employee|Subcontractor|Agency"],["Job role","text"],["Mobile number","tel"],["Work email","email"],["Address","text"],["Date of birth (optional)","date"],["Emergency contact name","text"],["Emergency contact number","tel"],["Employment status","select:Employed|Subcontractor|Agency|Inactive"],["Notes","textarea"]],
+"Workforce":[["Full name","text"],["Profile photograph","image"],["Worker type","select:Employee|Subcontractor|Agency"],["Job role","text"],["Mobile number","tel"],["Work email","email"],["Address","text"],["Date of birth (optional)","date"],["Emergency contact name","text"],["Emergency contact number","tel"],["Employment status","select:Employed|Subcontractor|Agency|Inactive"],["Notes","textarea"]],
 "Specialist Tooling":[["Tool / equipment name","text"],["Asset or serial number","text"],["Category","text"],["Condition","select:Good|Needs repair|Out of service"],["Current holder","text"],["Allocated job / site","text"],["Storage location","text"],["Last inspection date","date"],["Next inspection due","date"],["Notes","textarea"]],
 "Upcoming Jobs":[["Job / project name","text"],["Client","text"],["Site address","text"],["Job type","text"],["Start date","date"],["Expected finish date","date"],["Project manager","text"],["Job documents / plans / site photos","file"],["Status","select:Quoting|Scheduled|Ready to start|In progress|On hold|Complete"],["Notes","textarea"]],
 "Vehicles":[["Vehicle make and model","text"],["Registration number","text"],["VIN / chassis number","text"],["Current mileage","number"],["Keeper / assigned driver","text"],["V5C document reference / file note","text"],["V5C document upload","file"],["MOT expiry date","date"],["Last service date","date"],["Next service due (date or mileage)","text"],["Insurance renewal date","date"],["Tax due date","date"],["Notes","textarea"]],
@@ -313,6 +313,7 @@ const tableCols={
 const esc=escapeHtml;
 function fieldHtml(item,i){const [label,type]=item;const id="f"+i;let input;
 if(type==="textarea")input='<textarea id="'+id+'" name="'+esc(label)+'" rows="5" placeholder="Enter details here..."></textarea>';
+else if(type==="image")input='<input id="'+id+'" type="file" accept="image/*" capture="environment">';
 else if(type==="file")input='<input id="'+id+'" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">';
 else if(type.startsWith("select:"))input='<select id="'+id+'">'+type.slice(7).split("|").map(v=>'<option>'+v+'</option>').join("")+'</select>';
 else input='<input id="'+id+'" type="'+type+'">';
