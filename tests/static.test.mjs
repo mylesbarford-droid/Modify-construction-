@@ -42,7 +42,7 @@ test("D1 migrations include the required auth, assignments and update tables", (
 
 test("jobs are centrally stored and job updates must reference a real job", () => {
   assert.match(migration3, /CREATE TABLE IF NOT EXISTS jobs/);
-  assert.match(worker, /\\/api\\/jobs/);
+  assert.ok(worker.includes('"/api/jobs"'));
   assert.match(worker, /Choose a job from the shared Jobs & Sites register/);
   assert.match(app, /Company job register/);
   assert.match(app, /Import missing jobs into shared register/);
