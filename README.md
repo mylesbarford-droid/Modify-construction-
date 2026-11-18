@@ -1,14 +1,43 @@
 # MODIFY Construction Management
 
-A mobile-responsive management dashboard preview for MODIFY Construction.
+A mobile-responsive construction management dashboard preview.
 
 ## Cloudflare deployment
-This repository is configured as a Cloudflare Worker with static assets:
+
 - Worker entry point: `src/index.js`
 - Static website: `public/index.html`
-- Wrangler configuration: `wrangler.jsonc`
+- Deploy: `npx wrangler deploy`
 
-The Cloudflare deploy command can remain `npx wrangler deploy`. No build command is required.
+## Authentication foundation (not yet connected to the dashboard)
 
-## Important
-This first version is a front-end preview. It stores demonstration records in the current browser using localStorage. It is not yet a shared, authenticated, multi-user production system. Before using real company data, connect a secure shared database, manager authentication, private document storage, and backups.
+This branch adds the server-side foundation for a shared company sign-in followed by an individual six-digit staff PIN. The Worker verifies PINs using PBKDF2, stores only hashed session tokens, issues secure HTTP-only cookies, expires sessions after 12 hours, rate-limits sign-in attempts, and records sign-in events. Role permissions are enforced in the Worker API, not in browser JavaScript.
+
+Roles:
+- `administrator`: full access
+- `office_manager`: jobs, money, documents, suppliers, workforce and user-list visibility
+- `site_manager`: jobs, workforce, plant, vehicles, safety and document reading
+- `employee`: assigned jobs, timesheets and daily reports
+
+### Required Cloudflare setup
+
+1. Create a Cloudflare D1 database and apply `migrations/0001_auth.sql` followed by `migrations/0002_job_updates.sql`.
+2. Add a D1 binding named `DB` to the Worker, pointing to that database.
+3. Create a **private** Cloudflare R2 bucket for job photos and bind it to the Worker as `JOB_PHOTOS`. Do not enable public bucket access.
+4. Add Worker secrets named `COMPANY_LOGIN_PASSWORD` and `BOOTSTRAP_KEY`. Use different, long random values.
+5. Deploy only to a non-production test environment first.
+6. Create the first administrator by sending a POST to `/api/setup/first-admin` with header `x-bootstrap-key: <BOOTSTRAP_KEY>` and JSON body `{"name":"Administrator name","staffCode":"ADMIN","pin":"choose-a-unique-six-digit-pin"}`.
+7. Immediately remove the `BOOTSTRAP_KEY` secret from the Worker after setup.
+
+### Shared job-update API (backend foundation)
+
+The Worker now includes role-checked endpoints for listing and creating job updates, manager approval/rejection, and private photo upload/retrieval through the `JOB_PHOTOS` R2 binding. Employees are restricted to jobs present in `job_assignments`; managers have review permission. Each decision and photo upload is written to the audit log. Apply `migrations/0002_job_updates.sql` before using these endpoints.
+
+**Still not ready for production:** the dashboard has not yet been connected to the login or these APIs. The current Job Updates screen still uses browser-local records and IndexedDB photos, and the employee-to-job assignment and staff administration screens are not implemented. The R2 binding and D1 database must be configured in the actual Cloudflare account. Automated and browser end-to-end tests have not been run. Do not deploy this branch to the live site or enter real company information until those items are completed.
+
+The initial administrator is created once only. Further staff provisioning and role management still need a secured administrator workflow.
+
+## Important production limitation
+
+**This is not yet a production-ready shared company system.** The existing dashboard still reads and writes its demonstration records in browser `localStorage`; this branch does not migrate those records into D1 or connect the dashboard screens to these authenticated APIs. Do not enter real company records or rely on these role permissions to protect the existing dashboard until that integration, private file storage, backups, and end-to-end tests are completed.
+
+The original preview used browser-local storage, which is not shared between staff or devices.
