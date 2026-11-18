@@ -460,7 +460,6 @@ window.renderV2=function(){
  body.innerHTML='<div class="watermark"><img class="section-logo" src="/logo.jpg" alt="MODIFY Construction"> MODIFY CONSTRUCTION · '+escapeHtml(current.toUpperCase())+'</div><div class="toolbar"><input id="searchV2" placeholder="Search '+escapeHtml(current.toLowerCase())+'..."></div><div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+escapeHtml(c)+'</th>').join("")+'<th>Files</th></tr></thead><tbody>'+list.map((row,i)=>'<tr>'+cols.map(c=>'<td>'+escapeHtml(row[c]||"—")+'</td>').join("")+'<td>'+(row.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</td></tr>').join("")+'</tbody></table>'+(list.length?"":'<div class="empty">No records yet. Select “Add new” to enter your first record.</div>')+'</div>';
  body.querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{const file=await window.getModifyStoredFile(b.dataset.file);if(!file)return;const url=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=url;a.download=file.name;a.target="_blank";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)});
  $("searchV2").oninput=e=>{const q=e.target.value.toLowerCase();body.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")};
- }
 };
 $("add").onclick=()=>openRecordForm(current);
 renderV2();
