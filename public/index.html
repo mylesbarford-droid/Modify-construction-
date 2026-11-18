@@ -154,6 +154,22 @@ main{width:100%!important;min-width:0!important;margin:0!important}
 #pagebody .tablewrap{width:100%!important}
 }
 </style>
+
+<style id="modify-mobile-navigation-scroll-fix-v1">
+/* Keep the page and the navigation drawer independently scrollable. */
+html,body{min-height:100%;height:auto!important;overflow-y:auto!important;overscroll-behavior-y:auto}
+.shell{min-height:100dvh!important}
+.sidebar{min-height:0;max-height:100dvh;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.sidebar .nav{flex:0 0 auto}
+.sidebar .sidefoot{flex:0 0 auto}
+@media(max-width:650px){
+  .sidebar{position:fixed!important;top:0!important;bottom:0!important;left:0!important;height:100dvh!important;max-height:100dvh!important;width:min(86vw,300px)!important;overflow-y:auto!important;z-index:1000!important;transform:translateX(-105%);transition:transform .22s ease}
+  .sidebar.open{transform:translateX(0)!important}
+  .mobilemenu{display:inline-flex!important;align-items:center;justify-content:center;min-width:42px;min-height:42px;position:relative;z-index:1001}
+  .main{min-height:100dvh}
+  .content{padding-bottom:max(45px,env(safe-area-inset-bottom))}
+}
+</style>
 </head>
 <body>
 <div class="shell">
