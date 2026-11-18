@@ -599,6 +599,16 @@ renderV2();
    var heading=document.getElementById("title");if(heading)heading.textContent=page==="Dashboard"?"Management overview":page;
    var crumb=document.getElementById("crumb");if(crumb)crumb.textContent=page;
    if(page==="Money"||page==="Job Updates"){if(typeof window.renderV2==="function"){window.renderV2();return}}
+   if(page==="Workforce"){
+    var people=(records&&Array.isArray(records.Workforce)?records.Workforce:[]);
+    var pb=document.getElementById("pagebody");
+    var safe=function(v){return String(v||"").replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
+    if(pb){
+     pb.innerHTML='<div class="watermark">MODIFY CONSTRUCTION · WORKFORCE</div><div class="workforce-intro"><h2>Your people</h2><p>Select a team member to view their details.</p></div><div class="workforce-grid">'+people.map(function(p,i){var n=p["Full name"]||"Team member";var role=p["Job role"]||p["Job role / trade"]||"Role not added";var initials=n.split(/\\s+/).map(function(x){return x[0]||""}).slice(0,2).join("").toUpperCase();return '<button type="button" class="worker-card" data-worker-index="'+i+'"><span class="worker-avatar">'+safe(initials)+'</span><span class="worker-info"><strong>'+safe(n)+'</strong><span class="worker-role">'+safe(role)+'</span><span class="worker-open">View profile →</span></span></button>'}).join("")+'</div>';
+     pb.querySelectorAll("[data-worker-index]").forEach(function(card){card.onclick=function(){var p=people[Number(card.dataset.workerIndex)];pb.innerHTML='<div class="card profile-card"><button id="workforceBack" class="profile-back">← Back to Workforce</button><h2>'+safe(p["Full name"]||"Team member")+'</h2><div class="profile-grid">'+Object.keys(p).filter(function(k){return typeof p[k]!=="object"&&p[k]!==""}).map(function(k){return '<div class="profile-field"><small>'+safe(k)+'</small><div>'+safe(p[k])+'</div></div>'}).join("")+'</div></div>';document.getElementById("workforceBack").onclick=function(){go("Workforce")}}})
+    }
+    return
+   }
    if(typeof renderV2Base==="function"){renderV2Base();return}
    if(typeof render==="function"){render();return}
    throw new Error("No page renderer is available");
