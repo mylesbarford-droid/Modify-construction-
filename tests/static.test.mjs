@@ -52,7 +52,7 @@ test("jobs are centrally stored and job updates must reference a real job", () =
 
 test("operational registers have shared D1 storage and role-checked API routes", () => {
   assert.match(migration4, /CREATE TABLE IF NOT EXISTS module_records/);
-  assert.match(worker, /\/api\/modules\//);
+  assert.match(worker, /moduleRoute/);
   assert.match(worker, /modulePermissions/);
   assert.match(worker, /job_assignments WHERE user_id=\?/);
   assert.match(app, /syncOperationalRegisters/);
