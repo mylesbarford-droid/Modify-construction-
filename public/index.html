@@ -509,7 +509,7 @@ renderV2();
  oldClick.addEventListener("click",e=>{const b=e.target.closest('button[data-page="Job Updates"]');if(b){current="Job Updates";document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");renderV2()}});
  const oldRender=window.renderV2; 
  // The most recent renderer is now wrapped so the job diary gets its dedicated view.
- window.renderV2=function(){if(current==="Job Updates"){const original=oldRender;original();if($("pagebody").innerHTML.includes("Site diary"))return; } };
+ window.renderV2=function(){if(current==="Job Updates"){const original=oldRender;original();if($("pagebody").innerHTML.includes("Site diary"))return; } else { return oldRender(); } };
  // Restore dispatch by invoking the dedicated renderer on this section; other sections continue using the existing renderer.
  const diaryRender=window.renderV2;
  window.renderV2=function(){if(current==="Job Updates"){ 
