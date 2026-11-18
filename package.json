@@ -1,0 +1,9 @@
+{
+  "name": "modify-construction-management",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.js && node --check public/shared-app.js",
+    "test": "node --test"
+  }
+}
