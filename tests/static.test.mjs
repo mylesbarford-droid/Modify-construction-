@@ -7,6 +7,7 @@ const app = await readFile(new URL("../public/shared-app.js", import.meta.url), 
 const setup = await readFile(new URL("../public/setup.html", import.meta.url), "utf8");
 const migration1 = await readFile(new URL("../migrations/0001_auth.sql", import.meta.url), "utf8");
 const migration2 = await readFile(new URL("../migrations/0002_job_updates.sql", import.meta.url), "utf8");
+const migration3 = await readFile(new URL("../migrations/0003_jobs.sql", import.meta.url), "utf8");
 
 test("authentication endpoints and secure session cookie exist", () => {
   assert.match(worker, /\/api\/auth\/login/);
@@ -37,4 +38,13 @@ test("dashboard includes sign-in, shared updates and first-admin setup", () => {
 test("D1 migrations include the required auth, assignments and update tables", () => {
   for (const table of ["users", "sessions", "auth_attempts", "audit_log"]) assert.match(migration1, new RegExp("CREATE TABLE IF NOT EXISTS " + table));
   for (const table of ["job_assignments", "job_updates", "job_update_photos"]) assert.match(migration2, new RegExp("CREATE TABLE IF NOT EXISTS " + table));
+});
+
+test("jobs are centrally stored and job updates must reference a real job", () => {
+  assert.match(migration3, /CREATE TABLE IF NOT EXISTS jobs/);
+  assert.match(worker, /\\/api\\/jobs/);
+  assert.match(worker, /Choose a job from the shared Jobs & Sites register/);
+  assert.match(app, /Company job register/);
+  assert.match(app, /Import missing jobs into shared register/);
+  assert.match(app, /View job updates & site diary/);
 });
