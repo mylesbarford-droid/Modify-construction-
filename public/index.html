@@ -617,6 +617,33 @@ renderV2();
 </script>
 
 
+<script id="modify-documents-standalone">
+(function(){
+ function safe(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+ window.renderDocumentsStandalone=function(){
+  try{
+   var body=document.getElementById("pagebody");
+   if(!body)throw new Error("Documents page container is missing");
+   var docs=(records&&Array.isArray(records.Documents)?records.Documents:[]);
+   var cats=["All documents","General Documents","Quotes","RAMS","COSHH","Risk Assessments"];
+   var chosen=window.modifyDocsFilter||"All documents";
+   if(!cats.includes(chosen))chosen="All documents";
+   var filtered=docs.filter(function(d){return chosen==="All documents"||(d["Document category"]||"General Documents")===chosen});
+   document.getElementById("title").textContent="Documents";
+   document.getElementById("subtitle").textContent="Company document library, quotes, RAMS, COSHH and risk assessments.";
+   document.getElementById("crumb").textContent="Documents";
+   document.getElementById("add").style.display="inline-block";
+   body.innerHTML='<div class="watermark"><img class="section-logo" src="/logo.jpg" alt="MODIFY Construction"> MODIFY CONSTRUCTION · DOCUMENT CONTROL</div><div class="doc-category-grid">'+cats.slice(1).map(function(c){return '<button type="button" class="doc-category '+(chosen===c?"selected":"")+'" data-doc-category="'+safe(c)+'"><strong>'+safe(c)+'</strong><small>'+docs.filter(function(d){return (d["Document category"]||"General Documents")===c}).length+' documents</small><span>Open folder →</span></button>'}).join("")+'</div><div class="toolbar"><input id="docsSearchStandalone" placeholder="Search documents, job numbers, clients..."><select id="docsCategoryStandalone">'+cats.map(function(c){return '<option value="'+safe(c)+'" '+(chosen===c?"selected":"")+'>'+safe(c)+'</option>'}).join("")+'</select></div><div class="cardhead"><h2>'+safe(chosen)+'</h2><span class="muted">'+filtered.length+' records</span></div><div class="tablewrap"><table><thead><tr><th>Document</th><th>Job number</th><th>Reference</th><th>Date / review</th><th>Status</th><th>Files</th></tr></thead><tbody>'+filtered.map(function(d){return '<tr><td><strong>'+safe(d["Document title"]||"Untitled document")+'</strong><div class="muted">'+safe(d["Document category"]||"General Documents")+' · Rev '+safe(d.Revision||"—")+'</div></td><td>'+safe(d["Job number"]||"—")+'</td><td>'+safe(d["Document reference / quote number"]||"—")+'</td><td>'+safe(d["Document date"]||"—")+' / '+safe(d["Expiry / review date"]||"—")+'</td><td>'+safe(d.Status||"Draft")+'</td><td>'+(d.attachments||[]).map(function(a){return '<button type="button" class="smallaction" data-doc-file="'+safe(a.id)+'">'+safe(a.name)+'</button>'}).join(" ")+'</td></tr>'}).join("")+'</tbody></table>'+(filtered.length?"":'<div class="empty">No documents in this folder yet. Select Add new to upload a document.</div>')+'</div>';
+   body.querySelectorAll("[data-doc-category]").forEach(function(b){b.onclick=function(){window.modifyDocsFilter=b.dataset.docCategory;window.renderDocumentsStandalone()}});
+   document.getElementById("docsCategoryStandalone").onchange=function(e){window.modifyDocsFilter=e.target.value;window.renderDocumentsStandalone()};
+   document.getElementById("docsSearchStandalone").oninput=function(e){var q=e.target.value.toLowerCase();body.querySelectorAll("tbody tr").forEach(function(tr){tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"})};
+   body.querySelectorAll("[data-doc-file]").forEach(function(b){b.onclick=async function(){try{var f=await window.getModifyStoredFile(b.dataset.docFile);if(!f||!f.blob){alert("This file is not available in this browser.");return}var u=URL.createObjectURL(f.blob);var a=document.createElement("a");a.href=u;a.download=f.name;a.click();setTimeout(function(){URL.revokeObjectURL(u)},30000)}catch(e){alert("Could not open this document.")}}});
+   document.getElementById("add").onclick=function(){window.openRecordForm("Documents")};
+  }catch(err){console.error("MODIFY Documents render error:",err);var p=document.getElementById("pagebody");if(p)p.innerHTML='<div class="card" style="padding:20px"><h2>Documents could not load</h2><p>'+safe(err&&err.message||err)+'</p><button type="button" onclick="location.reload()">Reload MODIFY</button></div>'}
+ };
+})();
+</script>
+
 <script id="modify-navigation-recovery">
 (function(){
  function go(page){
@@ -627,7 +654,7 @@ renderV2();
    var side=document.getElementById("sidebar");if(side)side.classList.remove("open");
    var heading=document.getElementById("title");if(heading)heading.textContent=page==="Dashboard"?"Management overview":page;
    var crumb=document.getElementById("crumb");if(crumb)crumb.textContent=page;
-   if(page==="Money"||page==="Job Updates"||page==="Documents"){if(typeof window.renderV2==="function"){window.renderV2();return}}
+   if(page==="Documents"&&typeof window.renderDocumentsStandalone==="function"){window.renderDocumentsStandalone();return} if(page==="Money"||page==="Job Updates"){if(typeof window.renderV2==="function"){window.renderV2();return}}
    if(page==="Workforce"){
     var people=(records&&Array.isArray(records.Workforce)?records.Workforce:[]);
     var pb=document.getElementById("pagebody");
