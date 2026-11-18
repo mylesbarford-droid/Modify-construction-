@@ -51,3 +51,6 @@ This is an integration milestone, not a finished production system:
 - GitHub automated checks are not a substitute for browser end-to-end testing. A live Cloudflare deployment and end-to-end test have not been completed.
 
 Do not enter real company information or rely on this as the production system until the remaining integrations, backups, access checks and end-to-end tests are completed.
+
+
+Operational register synchronisation is being validated in CI and still requires a staging browser test before release.
