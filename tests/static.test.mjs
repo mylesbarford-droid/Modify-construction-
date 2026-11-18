@@ -1,0 +1,40 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const worker = await readFile(new URL("../src/index.js", import.meta.url), "utf8");
+const app = await readFile(new URL("../public/shared-app.js", import.meta.url), "utf8");
+const setup = await readFile(new URL("../public/setup.html", import.meta.url), "utf8");
+const migration1 = await readFile(new URL("../migrations/0001_auth.sql", import.meta.url), "utf8");
+const migration2 = await readFile(new URL("../migrations/0002_job_updates.sql", import.meta.url), "utf8");
+
+test("authentication endpoints and secure session cookie exist", () => {
+  assert.match(worker, /\/api\/auth\/login/);
+  assert.match(worker, /\/api\/auth\/me/);
+  assert.match(worker, /HttpOnly; Secure; SameSite=Strict/);
+  assert.match(worker, /PBKDF2_ITERATIONS = 310000/);
+});
+
+test("staff administration and job assignment endpoints exist", () => {
+  assert.match(worker, /\/api\/auth\/users/);
+  assert.match(worker, /\/api\/job-assignments/);
+  assert.match(worker, /Only the administrator can create staff accounts/);
+});
+
+test("job update endpoints enforce role checks and review state", () => {
+  assert.match(worker, /\/api\/job-updates/);
+  assert.match(worker, /Only managers can review job updates/);
+  assert.match(worker, /review_status='pending'/);
+});
+
+test("dashboard includes sign-in, shared updates and first-admin setup", () => {
+  assert.match(app, /modify-login-form/);
+  assert.match(app, /\/api\/job-updates/);
+  assert.match(app, /Staff & assignments/);
+  assert.match(setup, /\/api\/setup\/first-admin/);
+});
+
+test("D1 migrations include the required auth, assignments and update tables", () => {
+  for (const table of ["users", "sessions", "auth_attempts", "audit_log"]) assert.match(migration1, new RegExp("CREATE TABLE IF NOT EXISTS " + table));
+  for (const table of ["job_assignments", "job_updates", "job_update_photos"]) assert.match(migration2, new RegExp("CREATE TABLE IF NOT EXISTS " + table));
+});
