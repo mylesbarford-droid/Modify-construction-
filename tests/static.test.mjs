@@ -7,7 +7,8 @@ const app = await readFile(new URL("../public/shared-app.js", import.meta.url), 
 const setup = await readFile(new URL("../public/setup.html", import.meta.url), "utf8");
 const migration1 = await readFile(new URL("../migrations/0001_auth.sql", import.meta.url), "utf8");
 const migration2 = await readFile(new URL("../migrations/0002_job_updates.sql", import.meta.url), "utf8");
-const migration3 = await readFile(new URL("../migrations/0003_jobs.sql", import.meta.url), "utf8");\nconst migration4 = await readFile(new URL("../migrations/0004_shared_modules.sql", import.meta.url), "utf8");
+const migration3 = await readFile(new URL("../migrations/0003_jobs.sql", import.meta.url), "utf8");
+const migration4 = await readFile(new URL("../migrations/0004_shared_modules.sql", import.meta.url), "utf8");
 
 test("authentication endpoints and secure session cookie exist", () => {
   assert.match(worker, /\/api\/auth\/login/);
