@@ -704,5 +704,43 @@ renderV2();
  },true);
 })();
 </script>
+
+<script id="modify-job-updates-form-v1">
+(()=>{
+ const jobs=()=>Array.isArray(records["Jobs & Sites"])?records["Jobs & Sites"]:[];
+ const updates=()=>Array.isArray(records["Job Updates"])?records["Job Updates"]:(records["Job Updates"]=[]);
+ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const options=(arr,placeholder)=>'<option value="">'+placeholder+'</option>'+arr.map(x=>'<option>'+esc(x)+'</option>').join("");
+ const style=document.createElement("style");
+ style.textContent='.ju-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ju-field{display:grid;gap:6px}.ju-field label{font-size:12px;color:var(--muted);font-weight:700}.ju-field select,.ju-field textarea,.ju-field input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:#111317;color:#f4f1e8}.ju-wide{grid-column:1/-1}.ju-preview{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}.ju-preview img{width:105px;height:85px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}.ju-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}.ju-review{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}.ju-review img{width:120px;height:90px;object-fit:cover;border-radius:8px;margin:8px 8px 0 0}@media(max-width:600px){.ju-grid{grid-template-columns:1fr}.ju-wide{grid-column:auto}}';
+ document.head.appendChild(style);
+ let selectedJob="";
+ function render(){
+  const body=document.getElementById("pagebody");if(!body)return;
+  document.getElementById("title").textContent="Job updates & site diary";
+  document.getElementById("subtitle").textContent="Choose update details, attach site photos and review before submitting.";
+  document.getElementById("crumb").textContent="Job Updates";
+  const pending=updates().filter(x=>(x.reviewStatus||"Pending review")==="Pending review");
+  body.innerHTML='<div class="card"><div class="cardhead"><h2>Create a job update</h2><span class="muted">Photos supported</span></div><div class="ju-grid"><div class="ju-field ju-wide"><label>Job / project</label><select id="juJob">'+options(jobs().map(j=>String(j["Job number"]||"")+" — "+String(j["Job / project name"]||"")), "Choose a job")+'</select></div><div class="ju-field"><label>Work stage</label><select id="juStage">'+options(["Groundworks","Foundations","Drainage","Structural work","Roofing","First fix","Second fix","Plastering","Finishes","External works","Handover","Other"],"Select stage")+'</select></div><div class="ju-field"><label>Update status</label><select id="juStatus">'+options(["Not started","In progress","Completed","On hold","Issue / delay","Inspection required"],"Select status")+'</select></div><div class="ju-field"><label>Work carried out</label><select id="juWork">'+options(["Preparation","Installation","Repair","Inspection","Testing","Delivery","Cleaning / clearance","Other"],"Select work type")+'</select></div><div class="ju-field"><label>Site condition / issue</label><select id="juIssue">'+options(["No issues","Access issue","Weather delay","Material shortage","Plant / equipment issue","Quality issue","Health & safety concern","Other"],"Select condition")+'</select></div><div class="ju-field ju-wide"><label>Next action</label><select id="juNext">'+options(["Continue planned works","Arrange inspection","Order materials","Resolve issue","Book subcontractor","Update programme","Prepare handover","No further action","Other"],"Select next action")+'</select></div><div class="ju-field ju-wide"><label>Additional notes (optional)</label><textarea id="juNotes" rows="3" placeholder="Add any detail the selections do not cover..."></textarea></div><div class="ju-field ju-wide"><label>Attach site photos</label><input id="juPhotos" type="file" accept="image/*" capture="environment" multiple><div class="muted">You can select several photos or take a picture on your phone.</div><div class="ju-preview" id="juPreview"></div></div></div><div class="ju-actions"><button class="btn primary" id="juReview">Review update</button></div></div><div class="card" style="margin-top:14px"><div class="cardhead"><h2>Updates awaiting review</h2><span class="muted">'+pending.length+' pending</span></div><div id="juPending">'+(pending.length?pending.slice().reverse().map((x)=>'<div class="ju-review"><strong>'+esc(x.jobName||x.jobNumber)+' · '+esc(x.stage)+'</strong><div class="muted">'+esc(x.jobNumber)+' · '+esc(x.worker||"Staff member")+' · '+new Date(x.date).toLocaleString()+'</div><p>'+esc(x.status)+' · '+esc(x.workType||"")+' · '+esc(x.issue||"")+'</p><p>'+esc(x.note||"")+'</p><div class="muted">Attached photos: '+((x.attachments||[]).length)+'</div><button class="btn" data-ju-approve="'+esc(x.id)+'">Approve</button> <button class="btn" data-ju-reject="'+esc(x.id)+'">Reject</button></div>').join(""):'<div class="empty">No updates waiting for review.</div>')+'</div></div><div class="card" style="margin-top:14px"><div class="cardhead"><h2>Update history</h2><span class="muted">'+updates().length+' total</span></div><div id="juHistory">'+updates().slice().reverse().map(x=>'<div class="ju-review"><strong>'+esc(x.jobName||x.jobNumber)+' · '+esc(x.stage)+'</strong><div class="muted">'+esc(x.jobNumber)+' · '+new Date(x.date).toLocaleString()+'</div><p>'+esc(x.status)+' · '+esc(x.reviewStatus||"Pending review")+'</p><p>'+esc(x.note||"")+'</p></div>').join("")+'</div></div>';
+  const photos=document.getElementById("juPhotos");
+  photos.onchange=()=>{const preview=document.getElementById("juPreview");preview.innerHTML="";[...photos.files].forEach(file=>{if(!file.type.startsWith("image/"))return;const img=document.createElement("img");img.alt=file.name;img.src=URL.createObjectURL(file);preview.appendChild(img)})};
+  document.getElementById("juReview").onclick=async()=>{
+   const jobValue=document.getElementById("juJob").value;const jobNo=jobValue.split(" — ")[0];const job=jobs().find(j=>String(j["Job number"]||"")===jobNo);
+   const stage=document.getElementById("juStage").value,status=document.getElementById("juStatus").value,workType=document.getElementById("juWork").value,issue=document.getElementById("juIssue").value,nextAction=document.getElementById("juNext").value,files=[...photos.files];
+   if(!job||!stage||!status||!workType||!issue||!nextAction){alert("Please select a job and complete each required selection.");return}
+   if(files.some(f=>!f.type.startsWith("image/"))){alert("Please attach image files only.");return}
+   const summary='Job: '+jobValue+'\nStage: '+stage+'\nStatus: '+status+'\nWork: '+workType+'\nSite condition: '+issue+'\nNext action: '+nextAction+'\nNotes: '+document.getElementById("juNotes").value+'\nPhotos: '+files.length;
+   if(!confirm("Review this update before submitting:\n\n"+summary+"\n\nSubmit for manager review?"))return;
+   let attachments=[];try{if(files.length)attachments=await saveFiles(files)}catch(e){alert("The photos could not be saved. Please try again.");return}
+   updates().push({id:"ju-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),jobNumber:jobNo,jobName:job["Job / project name"]||"",worker:"Signed-in staff member",stage,status,workType,issue,nextAction,note:document.getElementById("juNotes").value,date:new Date().toISOString(),attachments,reviewStatus:"Pending review"});
+   localStorage.setItem("modifyRecordsV2",JSON.stringify(records));alert("Update submitted for review.");render();
+  };
+  body.querySelectorAll("[data-ju-approve],[data-ju-reject]").forEach(btn=>btn.onclick=()=>{const id=btn.dataset.juApprove||btn.dataset.juReject;const item=updates().find(x=>x.id===id);if(!item)return;const approved=!!btn.dataset.juApprove;if(!confirm((approved?"Approve":"Reject")+" this job update?"))return;item.reviewStatus=approved?"Approved":"Rejected";item.reviewedAt=new Date().toISOString();item.reviewedBy="Manager";localStorage.setItem("modifyRecordsV2",JSON.stringify(records));render()});
+ }
+ document.addEventListener("click",e=>{const nav=e.target.closest('#nav button[data-page="Job Updates"]');if(!nav)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===nav));document.getElementById("sidebar")?.classList.remove("open");window.current="Job Updates";render()},true);
+ window.renderJobUpdatesV1=render;
+})();
+</script>
+
 </body>
 </html>
