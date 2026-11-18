@@ -37,6 +37,16 @@ table{color:#eeeae0!important}th{background:#24221c!important;color:#e0c477!impo
 a{color:#e0c477!important}
 </style>
 
+<style id="modify-app-viewport-fix">
+html,body{width:100%;min-width:0;min-height:100%;margin:0!important;padding:0!important}
+body{min-height:100vh;min-height:100dvh;overflow-x:hidden}
+.shell{display:grid!important;grid-template-columns:248px minmax(0,1fr)!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:100vh!important;min-height:100dvh!important;height:auto!important;margin:0!important;align-items:stretch!important}
+.main{display:block!important;width:100%!important;min-width:0!important;min-height:100vh!important;min-height:100dvh!important;margin:0!important;padding:0!important;align-self:stretch!important}
+.content{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:calc(100vh - 72px)!important;min-height:calc(100dvh - 72px)!important;margin:0!important}
+#pagebody{display:block!important;width:100%!important;min-width:0!important;min-height:240px}
+@media(max-width:950px){.shell{grid-template-columns:205px minmax(0,1fr)!important}}
+@media(max-width:650px){.shell{display:block!important;width:100%!important;min-height:100dvh!important}.main{width:100%!important;min-height:100dvh!important}.content{width:100%!important;min-height:calc(100dvh - 60px)!important;padding:22px 14px 45px!important}.top{width:100%!important}.sidebar{height:100dvh!important}}
+</style>
 </head>
 <body>
 <div class="shell">
