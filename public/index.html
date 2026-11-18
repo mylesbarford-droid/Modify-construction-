@@ -731,7 +731,7 @@ renderV2();
    if(files.some(f=>!f.type.startsWith("image/"))){alert("Please attach image files only.");return}
    const summary='Job: '+jobValue+'\nStage: '+stage+'\nStatus: '+status+'\nWork: '+workType+'\nSite condition: '+issue+'\nNext action: '+nextAction+'\nNotes: '+document.getElementById("juNotes").value+'\nPhotos: '+files.length;
    if(!confirm("Review this update before submitting:\n\n"+summary+"\n\nSubmit for manager review?"))return;
-   let attachments=[];try{if(files.length)attachments=await saveFiles(files)}catch(e){alert("The photos could not be saved. Please try again.");return}
+   let attachments=[];try{if(files.length){if(typeof window.saveModifyFiles!=="function")throw new Error("Photo storage is unavailable");attachments=await window.saveModifyFiles(files)}}catch(e){alert("The photos could not be saved. Please try again.");return}
    updates().push({id:"ju-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),jobNumber:jobNo,jobName:job["Job / project name"]||"",worker:"Signed-in staff member",stage,status,workType,issue,nextAction,note:document.getElementById("juNotes").value,date:new Date().toISOString(),attachments,reviewStatus:"Pending review"});
    localStorage.setItem("modifyRecordsV2",JSON.stringify(records));alert("Update submitted for review.");render();
   };
