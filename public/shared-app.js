@@ -31,7 +31,64 @@
   document.body.appendChild(cover);
   const api=async(path,opts={})=>{const r=await fetch(path,{credentials:"same-origin",...opts,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data};
   function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>'+esc(currentUser.name)+' · '+esc(currentUser.role.replaceAll("_"," "))+'</span><button id="modify-staff-open" type="button">Staff & assignments</button><button id="modify-logout" type="button">Sign out</button>';const staff=$("#modify-staff-open");if(staff)staff.style.display=currentUser.role==="administrator"||currentUser.role==="office_manager"?"":"none";$("#modify-logout")?.addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"})}catch{}location.reload()});staff?.addEventListener("click",openStaffPanel)}
-  async function boot(){try{const d=await api("/api/auth/me");currentUser=d.user;if(!currentUser)throw new Error("Please sign in");cover.remove();accountBar()}catch{cover.style.display="grid"}}
+  const moduleMap={
+    "Money":"money","Plant & Equipment":"plant","Vehicles":"vehicles","Workforce":"workforce",
+    "Workers":"workforce","Staff & Subcontractors":"workforce","Health & Safety":"safety",
+    "Documents":"documents","Suppliers & Materials":"suppliers","Job Materials":"materials",
+    "Specialist Tooling":"tooling","Timesheets":"timesheets","Daily Reports":"daily_reports"
+  };
+  let syncingModules=false, syncQueue=Promise.resolve();
+  const originalSetItem=Storage.prototype.setItem;
+  function moduleJobNumber(record){
+    const direct=record["Job number"]||record.jobNumber||record.job_number;
+    if(direct)return String(direct);
+    const name=String(record["Job / project"]||record["Allocated job / site"]||record["Location / allocated job"]||"").trim().toLowerCase();
+    if(!name)return "";
+    const job=sharedJobs.find(j=>String(j.project_name||"").trim().toLowerCase()===name);
+    return job?.job_number||"";
+  }
+  async function syncOperationalRegisters(){
+    if(syncingModules)return;
+    syncingModules=true;
+    try{
+      const jobs=await api("/api/jobs");sharedJobs=jobs.jobs||[];
+      const raw=localStorage.getItem("modifyRecordsV2");
+      const state=raw?JSON.parse(raw):{};
+      const permitted={
+        administrator:Object.keys(moduleMap),
+        office_manager:["Money","Documents","Suppliers & Materials","Job Materials","Workforce","Staff & Subcontractors"],
+        site_manager:["Plant & Equipment","Vehicles","Workforce","Staff & Subcontractors","Health & Safety","Documents","Specialist Tooling"],
+        employee:["Timesheets","Daily Reports"]
+      }[currentUser.role]||[];
+      for(const page of permitted){
+        const module=moduleMap[page],local=Array.isArray(state[page])?state[page]:[];
+        let remote=[];
+        try{remote=(await api("/api/modules/"+module+"/records")).records||[]}catch(e){if(!/permission/i.test(e.message))console.warn("Shared register load:",page,e.message);continue}
+        const byId=new Map();
+        remote.forEach(x=>{const rec={...x.record,id:x.id};byId.set(String(x.id),rec)});
+        local.forEach(rec=>{
+          if(!rec.id)rec.id=crypto.randomUUID();
+          byId.set(String(rec.id),rec);
+        });
+        state[page]=[...byId.values()];
+        for(const rec of local){
+          const jobNumber=moduleJobNumber(rec);
+          try{await api("/api/modules/"+module+"/records",{method:"POST",body:JSON.stringify({id:rec.id,jobNumber,record:rec})})}
+          catch(e){console.warn("Shared save skipped:",page,e.message)}
+        }
+      }
+      originalSetItem.call(localStorage,"modifyRecordsV2",JSON.stringify(state));
+    }catch(e){console.warn("Shared registers could not be synchronised:",e.message)}
+    finally{syncingModules=false}
+  }
+  Storage.prototype.setItem=function(key,value){
+    originalSetItem.call(this,key,value);
+    if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
+      syncQueue=syncQueue.then(()=>syncOperationalRegisters()).catch(e=>console.warn("Register sync failed",e));
+    }
+  };
+  let sharedJobs=[];
+  async function boot(){try{const d=await api("/api/auth/me");currentUser=d.user;if(!currentUser)throw new Error("Please sign in");cover.remove();accountBar();await syncOperationalRegisters()}catch{cover.style.display="grid"}}
   $("#modify-login-form").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const error=$("#modify-auth-error");error.textContent="Signing in…";try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({companyPassword:f.get("companyPassword"),staffCode:f.get("staffCode"),pin:f.get("pin")})});currentUser=d.user;cover.remove();accountBar();location.reload()}catch(err){error.textContent=err.message}});
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
