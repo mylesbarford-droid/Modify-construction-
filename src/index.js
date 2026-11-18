@@ -58,9 +58,9 @@ async function getSession(request, env) {
 }
 const PERMISSIONS = {
   administrator: ["*"],
-  office_manager: ["dashboard:read", "jobs:read", "jobs:write", "money:read", "money:write", "documents:read", "documents:write", "suppliers:read", "suppliers:write", "workforce:read", "workforce:write", "users:read"],
-  site_manager: ["dashboard:read", "jobs:read", "jobs:write", "workforce:read", "workforce:write", "plant:read", "plant:write", "vehicles:read", "vehicles:write", "safety:read", "safety:write", "documents:read"],
-  employee: ["dashboard:read", "jobs:assigned:read", "timesheets:read", "timesheets:write", "daily_reports:read", "daily_reports:write"]
+  office_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "money:read", "money:write", "documents:read", "documents:write", "suppliers:read", "suppliers:write", "workforce:read", "workforce:write", "users:read"],
+  site_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "workforce:read", "workforce:write", "plant:read", "plant:write", "vehicles:read", "vehicles:write", "safety:read", "safety:write", "documents:read"],
+  employee: ["job_updates:read", "job_updates:create", "dashboard:read", "jobs:assigned:read", "timesheets:read", "timesheets:write", "daily_reports:read", "daily_reports:write"]
 };
 function can(role, permission) {
   const grants = PERMISSIONS[role] || [];
@@ -122,6 +122,88 @@ async function handleApi(request, env) {
     if (!can(session.role, "users:read")) return json({ error: "You do not have permission to view users." }, 403);
     const { results } = await env.DB.prepare("SELECT id, full_name AS name, staff_code AS staffCode, role, active FROM users ORDER BY full_name").all();
     return json({ users: results });
+  }
+  if (url.pathname === "/api/job-updates" && request.method === "GET") {
+    if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." }, 403);
+    let result;
+    if (session.role === "employee") {
+      result = await env.DB.prepare("SELECT j.*, u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by WHERE EXISTS (SELECT 1 FROM job_assignments a WHERE a.user_id=? AND a.job_number=j.job_number) ORDER BY j.created_at DESC LIMIT 200").bind(session.user_id).all();
+    } else {
+      result = await env.DB.prepare("SELECT j.*, u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by ORDER BY j.created_at DESC LIMIT 500").all();
+    }
+    const ids = (result.results || []).map(x => x.id);
+    const photos = [];
+    for (const id of ids) {
+      const p = await env.DB.prepare("SELECT id, update_id, file_name, content_type, size_bytes FROM job_update_photos WHERE update_id=? ORDER BY created_at").bind(id).all();
+      photos.push(...(p.results || []));
+    }
+    return json({ updates: (result.results || []).map(x => ({ ...x, photos: photos.filter(p => p.update_id === x.id) })) });
+  }
+  if (url.pathname === "/api/job-updates" && request.method === "POST") {
+    if (!can(session.role, "job_updates:create")) return json({ error: "Not authorised." }, 403);
+    const input = await body(request);
+    const required = ["jobNumber", "stage", "status", "workType", "issue", "nextAction"];
+    if (!input || required.some(k => typeof input[k] !== "string" || !input[k].trim()) || input.note !== undefined && typeof input.note !== "string") return json({ error: "Complete all required job update selections." }, 400);
+    if (input.jobNumber.length > 80 || input.jobName?.length > 160 || input.note?.length > 3000) return json({ error: "One or more fields are too long." }, 400);
+    if (session.role === "employee") {
+      const assigned = await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id, input.jobNumber).first();
+      if (!assigned) return json({ error: "You can only update jobs assigned to you." }, 403);
+    }
+    const id = randomToken(16), now = Math.floor(Date.now()/1000);
+    await env.DB.prepare("INSERT INTO job_updates (id,job_number,job_name,stage,status,work_type,issue,next_action,note,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+      .bind(id,input.jobNumber.trim(),String(input.jobName||"").slice(0,160),input.stage.trim().slice(0,80),input.status.trim().slice(0,80),input.workType.trim().slice(0,80),input.issue.trim().slice(0,120),input.nextAction.trim().slice(0,120),String(input.note||"").slice(0,3000),session.user_id,now).run();
+    await audit(env, session, "job_update_created", id);
+    return json({ id, reviewStatus: "pending", createdAt: now }, 201);
+  }
+  const approveMatch = url.pathname.match(/^\/api\/job-updates\/([a-f0-9]+)\/review$/);
+  if (approveMatch && request.method === "POST") {
+    if (!can(session.role, "job_updates:review")) return json({ error: "Only managers can review job updates." }, 403);
+    const input = await body(request);
+    if (!input || !["approved","rejected"].includes(input.decision) || input.note !== undefined && typeof input.note !== "string") return json({ error: "Choose approve or reject." }, 400);
+    const update = await env.DB.prepare("SELECT id, review_status FROM job_updates WHERE id=?").bind(approveMatch[1]).first();
+    if (!update) return json({ error: "Job update not found." }, 404);
+    if (update.review_status !== "pending") return json({ error: "This update has already been reviewed." }, 409);
+    const now = Math.floor(Date.now()/1000);
+    const changed = await env.DB.prepare("UPDATE job_updates SET review_status=?, reviewed_by=?, reviewed_at=?, review_note=? WHERE id=? AND review_status='pending'")
+      .bind(input.decision,session.user_id,now,String(input.note||"").slice(0,1000),update.id).run();
+    if (!changed.meta?.changes) return json({ error: "This update has already been reviewed." }, 409);
+    await audit(env, session, "job_update_"+input.decision, update.id);
+    return json({ ok: true, reviewStatus: input.decision, reviewedAt: now });
+  }
+  const photoMatch = url.pathname.match(/^\/api\/job-updates\/([a-f0-9]+)\/photos$/);
+  if (photoMatch && request.method === "POST") {
+    if (!can(session.role, "job_updates:create")) return json({ error: "Not authorised." }, 403);
+    if (!env.JOB_PHOTOS) return json({ error: "Private photo storage is not configured." }, 503);
+    const update = await env.DB.prepare("SELECT id, job_number, created_by FROM job_updates WHERE id=?").bind(photoMatch[1]).first();
+    if (!update) return json({ error: "Job update not found." }, 404);
+    if (session.role === "employee" && update.created_by !== session.user_id) return json({ error: "You can only attach photos to your own updates." }, 403);
+    const type = request.headers.get("Content-Type") || "";
+    if (!["image/jpeg","image/png","image/webp"].includes(type.split(";")[0].trim().toLowerCase())) return json({ error: "Use a JPG, PNG or WebP image." }, 415);
+    const length = Number(request.headers.get("Content-Length") || 0);
+    if (length > 8*1024*1024) return json({ error: "Each photo must be 8 MB or smaller." }, 413);
+    const data = await request.arrayBuffer();
+    if (!data.byteLength || data.byteLength > 8*1024*1024) return json({ error: "Each photo must be between 1 byte and 8 MB." }, 413);
+    const id = randomToken(16), key = "job-updates/"+update.id+"/"+id;
+    await env.JOB_PHOTOS.put(key,data,{httpMetadata:{contentType:type.split(";")[0].trim().toLowerCase()}});
+    const name = (request.headers.get("X-File-Name") || "site-photo").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,120);
+    await env.DB.prepare("INSERT INTO job_update_photos (id,update_id,object_key,file_name,content_type,size_bytes,uploaded_by,created_at) VALUES (?,?,?,?,?,?,?,?)")
+      .bind(id,update.id,key,name,type.split(";")[0].trim().toLowerCase(),data.byteLength,session.user_id,Math.floor(Date.now()/1000)).run();
+    await audit(env,session,"job_update_photo_uploaded",update.id);
+    return json({ id, name, contentType:type.split(";")[0].trim().toLowerCase(), size:data.byteLength },201);
+  }
+  const getPhoto = url.pathname.match(/^\/api\/job-updates\/([a-f0-9]+)\/photos\/([a-f0-9]+)$/);
+  if (getPhoto && request.method === "GET") {
+    if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." },403);
+    if (!env.JOB_PHOTOS) return json({ error: "Private photo storage is not configured." },503);
+    const photo = await env.DB.prepare("SELECT p.object_key,p.content_type,p.file_name,j.job_number,j.created_by FROM job_update_photos p JOIN job_updates j ON j.id=p.update_id WHERE p.id=? AND p.update_id=?").bind(getPhoto[2],getPhoto[1]).first();
+    if (!photo) return json({ error: "Photo not found." },404);
+    if (session.role === "employee") {
+      const assigned = await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id,photo.job_number).first();
+      if (!assigned) return json({ error: "Not authorised." },403);
+    }
+    const object = await env.JOB_PHOTOS.get(photo.object_key);
+    if (!object) return json({ error: "Photo file not found." },404);
+    return new Response(object.body,{headers:{"content-type":photo.content_type,"content-disposition":'inline; filename="'+photo.file_name+'"',"cache-control":"private, no-store","x-content-type-options":"nosniff"}});
   }
   return json({ error: "API route not found." }, 404);
 }
