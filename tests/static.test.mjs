@@ -7,7 +7,7 @@ const app = await readFile(new URL("../public/shared-app.js", import.meta.url), 
 const setup = await readFile(new URL("../public/setup.html", import.meta.url), "utf8");
 const migration1 = await readFile(new URL("../migrations/0001_auth.sql", import.meta.url), "utf8");
 const migration2 = await readFile(new URL("../migrations/0002_job_updates.sql", import.meta.url), "utf8");
-const migration3 = await readFile(new URL("../migrations/0003_jobs.sql", import.meta.url), "utf8");
+const migration3 = await readFile(new URL("../migrations/0003_jobs.sql", import.meta.url), "utf8");\nconst migration4 = await readFile(new URL("../migrations/0004_shared_modules.sql", import.meta.url), "utf8");
 
 test("authentication endpoints and secure session cookie exist", () => {
   assert.match(worker, /\/api\/auth\/login/);
@@ -47,4 +47,13 @@ test("jobs are centrally stored and job updates must reference a real job", () =
   assert.match(app, /Company job register/);
   assert.match(app, /Import missing jobs into shared register/);
   assert.match(app, /View job updates & site diary/);
+});
+
+test("operational registers have shared D1 storage and role-checked API routes", () => {
+  assert.match(migration4, /CREATE TABLE IF NOT EXISTS module_records/);
+  assert.match(worker, /\/api\/modules\//);
+  assert.match(worker, /modulePermissions/);
+  assert.match(worker, /job_assignments WHERE user_id=\?/);
+  assert.match(app, /syncOperationalRegisters/);
+  assert.match(app, /modify-shared-records-loaded/);
 });
