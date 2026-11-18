@@ -229,7 +229,10 @@ async function handleApi(request, env) {
     if(!job)return json({error:"Job not found."},404);
     const updates=await env.DB.prepare("SELECT j.*,u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by WHERE j.job_number=? ORDER BY j.created_at DESC LIMIT 200").bind(jobNumber).all();
     const assignments=await env.DB.prepare("SELECT a.user_id,a.job_number,u.full_name,u.staff_code FROM job_assignments a JOIN users u ON u.id=a.user_id WHERE a.job_number=? ORDER BY u.full_name").bind(jobNumber).all();
-    return json({job,updates:updates.results||[],assignments:assignments.results||[]});
+    const moduleRows=await env.DB.prepare("SELECT module_name,record_id,payload,updated_at FROM module_records WHERE job_number=? ORDER BY module_name,updated_at DESC").bind(jobNumber).all();
+    const modulePermission={money:"money",plant:"plant",vehicles:"vehicles",workforce:"workforce",safety:"safety",documents:"documents",suppliers:"suppliers",materials:"suppliers",tooling:"plant",timesheets:"timesheets",daily_reports:"daily_reports"};
+    const linkedRecords=(moduleRows.results||[]).filter(row=>can(session.role,(modulePermission[row.module_name]||"unknown")+":read")).map(row=>({module:row.module_name,id:row.record_id,record:JSON.parse(row.payload),updatedAt:row.updated_at}));
+    return json({job,updates:updates.results||[],assignments:assignments.results||[],records:linkedRecords});
   }
   // Shared operational registers. Each record remains attached to its job number where supplied.
   const moduleRoute = url.pathname.match(/^\/api\/modules\/([a-z_]+)\/records(?:\/([^/]+))?$/);
