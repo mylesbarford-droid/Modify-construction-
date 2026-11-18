@@ -170,6 +170,26 @@ html,body{min-height:100%;height:auto!important;overflow-y:auto!important;oversc
   .content{padding-bottom:max(45px,env(safe-area-inset-bottom))}
 }
 </style>
+
+<style id="modify-navigation-scroll-fix-v2">
+/* Navigation has its own scroll region; the logo and footer remain in place. */
+@media(min-width:651px){
+  .sidebar{position:sticky!important;top:0!important;height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;min-height:0!important}
+}
+.sidebar{min-height:0!important}
+.sidebar>div:nth-child(2){flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-y:contain!important;touch-action:pan-y!important}
+.sidebar .nav{display:grid!important;grid-auto-rows:min-content!important;min-height:min-content!important;overflow:visible!important}
+.sidebar .nav button{flex:0 0 auto!important;min-height:44px!important}
+.sidebar .sidefoot{flex:0 0 auto!important}
+@media(max-width:650px){
+  .sidebar{position:fixed!important;inset:0 auto 0 0!important;height:100dvh!important;max-height:100dvh!important;width:min(86vw,300px)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;z-index:1100!important;overscroll-behavior:contain!important}
+  .sidebar>div:nth-child(2){flex:1 1 0!important;min-height:0!important;overflow-y:scroll!important;overflow-x:hidden!important;padding-bottom:24px!important;touch-action:pan-y!important}
+  .sidebar .nav{padding-bottom:18px!important}
+  .sidebar .sidefoot{padding-bottom:max(18px,env(safe-area-inset-bottom))!important}
+  html,body{overflow-x:hidden!important}
+  .main,.content{overflow:visible!important}
+}
+</style>
 </head>
 <body>
 <div class="shell">
