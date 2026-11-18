@@ -118,6 +118,59 @@ async function handleApi(request, env) {
   }
   const session = await getSession(request, env);
   if (!session) return json({ error: "Please sign in again." }, 401, { "set-cookie": clearCookie("modify_session") });
+  if (request.method === "POST" && url.pathname === "/api/auth/users") {
+    if (session.role !== "administrator") return json({ error: "Only the administrator can create staff accounts." }, 403);
+    const input = await body(request);
+    const roles = ["office_manager", "site_manager", "employee"];
+    if (!input || typeof input.name !== "string" || typeof input.staffCode !== "string" || !/^\\d{6}$/.test(input.pin || "") || !roles.includes(input.role)) return json({ error: "Enter a name, staff code, six-digit PIN and valid role." }, 400);
+    const name = input.name.trim().slice(0, 100), staffCode = input.staffCode.trim().slice(0, 40);
+    if (!name || !/^[a-zA-Z0-9_-]{2,40}$/.test(staffCode)) return json({ error: "Use a staff code with 2–40 letters, numbers, hyphens or underscores." }, 400);
+    const existing = await env.DB.prepare("SELECT 1 FROM users WHERE lower(staff_code)=lower(?)").bind(staffCode).first();
+    if (existing) return json({ error: "That staff code is already in use." }, 409);
+    const salt = randomToken(16), id = randomToken(16), now = Math.floor(Date.now()/1000);
+    await env.DB.prepare("INSERT INTO users (id,full_name,staff_code,role,pin_salt,pin_hash,active,created_at) VALUES (?,?,?,?,?,?,1,?)")
+      .bind(id,name,staffCode,input.role,salt,await pinHash(input.pin,salt),now).run();
+    await audit(env,session,"staff_created",staffCode+":"+input.role);
+    return json({ user: { id, name, staffCode, role: input.role, active: 1 } },201);
+  }
+  if (request.method === "PATCH" && url.pathname.startsWith("/api/auth/users/")) {
+    if (session.role !== "administrator") return json({ error: "Only the administrator can change staff accounts." }, 403);
+    const userId = url.pathname.slice("/api/auth/users/".length);
+    if (!/^[a-f0-9]{32}$/.test(userId)) return json({ error: "Invalid staff account." },400);
+    if (userId === session.user_id) return json({ error: "You cannot deactivate your own account." },400);
+    const input = await body(request);
+    if (!input || typeof input.active !== "boolean") return json({ error: "Choose whether the account is active." },400);
+    const result = await env.DB.prepare("UPDATE users SET active=? WHERE id=?").bind(input.active?1:0,userId).run();
+    if (!result.meta?.changes) return json({ error: "Staff account not found." },404);
+    if (!input.active) await env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(userId).run();
+    await audit(env,session,input.active?"staff_activated":"staff_deactivated",userId);
+    return json({ok:true});
+  }
+  if (url.pathname === "/api/job-assignments" && request.method === "GET") {
+    if (!["administrator","office_manager","site_manager"].includes(session.role)) return json({error:"Not authorised."},403);
+    const rows = await env.DB.prepare("SELECT a.user_id,a.job_number,u.full_name,u.staff_code FROM job_assignments a JOIN users u ON u.id=a.user_id ORDER BY a.job_number,u.full_name").all();
+    return json({assignments:rows.results||[]});
+  }
+  if (url.pathname === "/api/job-assignments" && request.method === "POST") {
+    if (session.role !== "administrator" && session.role !== "office_manager") return json({error:"Only an administrator or office manager can assign jobs."},403);
+    const input = await body(request);
+    if (!input || typeof input.userId !== "string" || typeof input.jobNumber !== "string" || !input.jobNumber.trim()) return json({error:"Choose a staff member and enter a job number."},400);
+    const user = await env.DB.prepare("SELECT id,role FROM users WHERE id=? AND active=1").bind(input.userId).first();
+    if (!user || user.role !== "employee") return json({error:"Choose an active employee account."},400);
+    const jobNumber=input.jobNumber.trim().slice(0,80);
+    await env.DB.prepare("INSERT OR IGNORE INTO job_assignments (user_id,job_number,created_at) VALUES (?,?,?)").bind(user.id,jobNumber,Math.floor(Date.now()/1000)).run();
+    await audit(env,session,"job_assigned",user.id+":"+jobNumber);
+    return json({ok:true},201);
+  }
+  if (url.pathname.startsWith("/api/job-assignments/") && request.method === "DELETE") {
+    if (session.role !== "administrator" && session.role !== "office_manager") return json({error:"Not authorised."},403);
+    const parts=url.pathname.split("/");
+    const userId=parts[3], jobNumber=decodeURIComponent(parts.slice(4).join("/"));
+    if (!userId || !jobNumber) return json({error:"Assignment not found."},400);
+    await env.DB.prepare("DELETE FROM job_assignments WHERE user_id=? AND job_number=?").bind(userId,jobNumber).run();
+    await audit(env,session,"job_unassigned",userId+":"+jobNumber);
+    return json({ok:true});
+  }
   if (request.method === "GET" && url.pathname === "/api/auth/users") {
     if (!can(session.role, "users:read")) return json({ error: "You do not have permission to view users." }, 403);
     const { results } = await env.DB.prepare("SELECT id, full_name AS name, staff_code AS staffCode, role, active FROM users ORDER BY full_name").all();
