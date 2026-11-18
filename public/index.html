@@ -326,15 +326,16 @@ function openRecordForm(page){
  $("saveNew").onclick=async()=>{const obj={};list.forEach((item,i)=>{const el=$("f"+i);obj[item[0]]=el.type==="file"?Array.from(el.files||[]).map(f=>f.name).join(", "):el.value.trim()});const files=[...list.flatMap((item,i)=>$("f"+i).type==="file"?Array.from($("f"+i).files||[]):[]),...Array.from($("recordFiles")?.files||[])];if(!Object.values(obj).some(Boolean)&&!files.length)return;if(page==="Upcoming Jobs"){const k="Job number (leave blank to generate automatically)";if(!obj[k]){const yr=new Date().getFullYear();const next=(records["Upcoming Jobs"]||[]).filter(j=>String(j["Job number"]||"").startsWith("MOD-"+yr+"-")).length+1;obj["Job number"]="MOD-"+yr+"-"+String(next).padStart(4,"0")}else obj["Job number"]=obj[k].trim();delete obj[k]}try{obj.attachments=await window.saveModifyFiles(files)}catch(e){alert("Files could not be saved. Try fewer or smaller files.");return}records[page]=records[page]||[];records[page].push(obj);localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");if(page==="Workforce"){current="Workforce";renderV2Base()}else{renderV2()}};
 }
 function editRecord(index){
- const row=(records[current]||[])[index];if(!row)return;
- const page=current,listFields=fields[page]||Object.keys(row).map(k=>[k,"text"]);
+ const page=current,rows=records[page]||[],row=rows[index];if(!row)return;
+ const listFields=fields[page]||Object.keys(row).filter(k=>k!=="attachments").map(k=>[k,"text"]);
  const modal=$("modal");
- modal.querySelector(".modal").innerHTML='<h2>Edit '+esc(page)+'</h2><p class="helptext">Update the details below. Changes are saved to this device.</p><div class="fieldgrid">'+listFields.map((f,i)=>fieldHtml(f)).join("")+'</div><div class="modalfoot"><button class="btn" id="cancelEdit">Cancel</button><button class="btn primary" id="saveEdit">Save changes</button></div>';
+ modal.querySelector(".modal").innerHTML='<h2>Edit '+esc(page)+'</h2><p class="helptext">Change any details, add photos or attach documents, then save.</p><div class="fieldgrid">'+listFields.map((f,i)=>fieldHtml(f,i)).join("")+'<div class="field full"><label for="editRecordFiles">Add photos or documents</label><input id="editRecordFiles" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"></div></div><div class="modalfoot"><button class="btn" id="cancelEdit">Cancel</button><button class="btn primary" id="saveEdit">Save changes</button></div>';
  listFields.forEach((f,i)=>{const el=$("f"+i);if(el&&row[f[0]]!==undefined&&el.type!=="file")el.value=String(row[f[0]]??"")});
  modal.classList.add("show");
  $("cancelEdit").onclick=()=>modal.classList.remove("show");
- $("saveEdit").onclick=async()=>{const uploads=[];for(let i=0;i<listFields.length;i++){const f=listFields[i],el=$("f"+i);if(!el)continue;if(el.type==="file"&&el.files?.length){uploads.push(...await window.saveModifyFiles(Array.from(el.files)))}else if(el.type!=="file"){row[f[0]]=el.value.trim()}}if(uploads.length)row.attachments=[...(row.attachments||[]),...uploads];localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");if(page==="Workforce"){const nav=document.querySelector('#nav button[data-page="Workforce"]');if(nav)nav.click();else renderV2Base()}else{renderV2Base()}};
+ $("saveEdit").onclick=async()=>{const uploads=[];try{for(let i=0;i<listFields.length;i++){const f=listFields[i],el=$("f"+i);if(!el)continue;if(el.type==="file"&&el.files?.length)uploads.push(...await window.saveModifyFiles(Array.from(el.files)));else if(el.type!=="file")row[f[0]]=el.value.trim()}const extra=$("editRecordFiles");if(extra&&extra.files.length)uploads.push(...await window.saveModifyFiles(Array.from(extra.files)))}catch(err){alert("The changes could not be saved. Please try again with smaller files.");return}if(uploads.length)row.attachments=[...(row.attachments||[]),...uploads];try{localStorage.setItem("modifyRecordsV2",JSON.stringify(records))}catch(err){alert("There is not enough browser storage to save these changes. Remove a large attachment and try again.");return}modal.classList.remove("show");const nav=document.querySelector('#nav button[data-page="'+page+'"]');if(nav)nav.click();else renderV2Base()};
 }
+window.editRecord=editRecord;
 function renderV2Base(){
  // Recalculate the content frame on every section change; avoid inherited fixed widths.
  const appMain=document.querySelector("main");
@@ -616,7 +617,7 @@ renderV2();
       var p=people[index];if(!p)return;
       pb.innerHTML='<div class="card profile-card"><div class="profile-heading"><div><button id="workforceBack" class="profile-back">← Back to Workforce</button><h2>'+safe(p["Full name"]||"Team member")+'</h2></div><button type="button" class="btn primary" id="editWorkforceMember">Edit details</button></div><div class="profile-grid">'+Object.keys(p).filter(function(k){return typeof p[k]!=="object"&&p[k]!==""}).map(function(k){return '<div class="profile-field"><small>'+safe(k)+'</small><div>'+safe(p[k])+'</div></div>'}).join("")+'</div></div>';
       pb.querySelector("#workforceBack").onclick=function(){go("Workforce")};
-      pb.querySelector("#editWorkforceMember").onclick=function(){current="Workforce";editRecord(index)};
+      pb.querySelector("#editWorkforceMember").onclick=function(){current="Workforce";window.editRecord(index)};
      };
      pb.querySelector("#addWorkforceMember").onclick=function(){current="Workforce";openRecordForm("Workforce")};
      pb.querySelector("#workforceSearch").oninput=draw;
