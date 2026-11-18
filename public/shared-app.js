@@ -79,7 +79,8 @@
           catch(e){console.warn("Shared save skipped:",page,e.message)}
         }
       }
-      originalSetItem.call(localStorage,"modifyRecordsV2",JSON.stringify(state));\n      window.dispatchEvent(new CustomEvent("modify-shared-records-loaded",{detail:state}));
+      originalSetItem.call(localStorage,"modifyRecordsV2",JSON.stringify(state));
+      window.dispatchEvent(new CustomEvent("modify-shared-records-loaded",{detail:state}));
     }catch(e){console.warn("Shared registers could not be synchronised:",e.message)}
     finally{syncingModules=false}
   }
