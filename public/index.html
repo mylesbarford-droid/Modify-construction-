@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>MODIFY | Construction Management</title>
+<style>
+:root{--ink:#17202b;--muted:#738092;--line:#e7ebef;--paper:#f5f7f9;--white:#fff;--orange:#ef7d32;--nav:#111923;--green:#16865b;--red:#c94d4d}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}button,input,select{font:inherit}button{cursor:pointer}.shell{min-height:100vh;display:grid;grid-template-columns:248px 1fr}.sidebar{background:var(--nav);color:#fff;padding:24px 16px;display:flex;flex-direction:column;gap:24px}.brand{display:flex;align-items:center;gap:11px;padding:0 9px}.mark{width:37px;height:37px;border-radius:10px;background:var(--orange);display:grid;place-items:center;font-weight:900;color:#111}.brand strong{font-size:19px;letter-spacing:2px}.brand small{display:block;color:#9eabb9;font-size:10px;letter-spacing:1.6px}.navlabel{color:#8491a0;text-transform:uppercase;font-size:10px;letter-spacing:1.4px;padding:0 12px;margin:4px 0}.nav{display:grid;gap:5px}.nav button{border:0;background:transparent;color:#c2cbd5;text-align:left;padding:12px;border-radius:9px;display:flex;gap:12px;align-items:center}.nav button.active,.nav button:hover{background:#273342;color:#fff}.nav .ico{width:19px;text-align:center;font-size:17px}.sidefoot{margin-top:auto;color:#9eabb9;font-size:12px;padding:12px}.main{min-width:0}.top{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:5}.crumb{color:var(--muted);font-size:13px}.user{display:flex;align-items:center;gap:10px;font-size:13px}.avatar{width:35px;height:35px;border-radius:50%;background:#ffe7d7;color:#9a4b18;display:grid;place-items:center;font-weight:700}.content{max-width:1440px;margin:auto;padding:30px 32px 60px}.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:25px}.heading h1{font-size:27px;margin:0 0 5px;letter-spacing:-.7px}.sub{color:var(--muted);font-size:13px}.actions{display:flex;gap:9px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 14px;border-radius:9px;font-weight:650}.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff}.btn:hover{filter:brightness(.97)}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:19px}.card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px}.statlabel{font-size:12px;color:var(--muted)}.statvalue{font-size:27px;font-weight:750;margin:8px 0 3px;letter-spacing:-.7px}.statnote{font-size:11px;color:var(--green)}.columns{display:grid;grid-template-columns:1.45fr 1fr;gap:16px}.cardhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.cardhead h2{font-size:15px;margin:0}.muted{color:var(--muted);font-size:12px}.job{padding:13px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:8px}.job:first-of-type{border-top:0}.jobname{font-weight:650}.jobmeta{color:var(--muted);font-size:12px;margin-top:3px}.progress{height:6px;background:#edf0f3;border-radius:10px;margin-top:10px;overflow:hidden}.progress span{display:block;height:100%;background:var(--orange);border-radius:10px}.pill{font-size:11px;padding:5px 8px;border-radius:20px;background:#edf7f2;color:var(--green);height:max-content}.pill.amber{background:#fff3e8;color:#a65a20}.task{display:flex;gap:10px;padding:12px 0;border-top:1px solid var(--line);align-items:flex-start}.dot{width:8px;height:8px;border-radius:50%;background:var(--orange);margin-top:6px;flex:none}.task strong{font-size:13px}.task small{display:block;color:var(--muted);margin-top:3px}.tablewrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:13px}.toolbar{display:flex;gap:10px;margin-bottom:14px}.toolbar input{max-width:320px;width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff}table{width:100%;border-collapse:collapse;min-width:620px}th,td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);font-size:13px}th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;background:#fbfcfd}td strong{font-weight:650}.empty{padding:40px;text-align:center;color:var(--muted)}.mobilemenu{display:none;background:none;border:0;font-size:22px}.notice{margin-top:16px;padding:12px 14px;background:#fff8ef;border:1px solid #f6dfc8;color:#80502b;border-radius:9px;font-size:12px}.modalback{position:fixed;inset:0;background:#10182088;display:none;align-items:center;justify-content:center;padding:18px;z-index:20}.modalback.show{display:flex}.modal{background:#fff;border-radius:14px;padding:22px;width:min(480px,100%);box-shadow:0 20px 70px #0003}.modal h2{margin:0 0 16px;font-size:19px}.field{display:grid;gap:6px;margin:12px 0}.field label{font-size:12px;color:var(--muted);font-weight:650}.field input,.field select{padding:11px;border:1px solid var(--line);border-radius:8px;width:100%}.modalfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+@media(max-width:950px){.shell{grid-template-columns:205px 1fr}.stats{grid-template-columns:repeat(2,1fr)}.columns{grid-template-columns:1fr}.content{padding:24px 20px}}
+@media(max-width:650px){.shell{display:block}.sidebar{position:fixed;z-index:10;inset:0 auto 0 0;width:260px;transform:translateX(-105%);transition:transform .2s;box-shadow:10px 0 35px #0003}.sidebar.open{transform:translateX(0)}.mobilemenu{display:block}.top{height:60px;padding:0 16px}.content{padding:22px 14px 45px}.heading{display:block}.heading h1{font-size:24px}.heading .actions{margin-top:15px}.stats{gap:9px}.card{padding:14px}.statvalue{font-size:23px}.user span{display:none}.crumb{display:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="mark">M</div><div><strong>MODIFY</strong><small>CONSTRUCTION</small></div></div>
+  <div><div class="navlabel">Workspace</div><nav class="nav" id="nav">
+    <button class="active" data-page="Dashboard"><span class="ico">▦</span>Dashboard</button>
+    <button data-page="Jobs & Sites"><span class="ico">⌂</span>Jobs & Sites</button>
+    <button data-page="Money"><span class="ico">£</span>Money</button>
+    <button data-page="Plant & Equipment"><span class="ico">⚙</span>Plant & Equipment</button>
+    <button data-page="Vehicles"><span class="ico">▰</span>Vehicles</button>
+    <button data-page="Staff & Subcontractors"><span class="ico">♙</span>Staff & Subcontractors</button>
+    <button data-page="Health & Safety"><span class="ico">✚</span>Health & Safety</button>
+    <button data-page="Documents"><span class="ico">▤</span>Documents</button>
+    <button data-page="Suppliers & Materials"><span class="ico">▧</span>Suppliers & Materials</button>
+  </nav></div>
+  <div class="sidefoot">Management workspace<br>MODIFY Construction</div>
+</aside>
+<main class="main">
+<header class="top"><div style="display:flex;align-items:center;gap:12px"><button class="mobilemenu" id="menu">☰</button><span class="crumb">MODIFY / <b id="crumb">Dashboard</b></span></div><div class="user"><div class="avatar">M</div><span>Management</span></div></header>
+<section class="content">
+<div class="heading"><div><h1 id="title">Good afternoon</h1><div class="sub" id="subtitle">Here’s what’s happening across your projects today.</div></div><div class="actions"><button class="btn" id="export">Export CSV</button><button class="btn primary" id="add">＋ Add new</button></div></div>
+<div id="pagebody"></div>
+<div class="notice">Preview version: records are currently saved in this browser only. Shared manager accounts, cloud database and document storage still need to be connected before using this for live company records.</div>
+</section>
+</main>
+</div>
+<div class="modalback" id="modal"><div class="modal"><h2 id="modalTitle">Add record</h2><div class="field"><label>Record name</label><input id="recordName" placeholder="Enter a name"></div><div class="field"><label>Reference / details</label><input id="recordDetail" placeholder="Site, registration, supplier or notes"></div><div class="field"><label>Status</label><select id="recordStatus"><option>Active</option><option>In progress</option><option>Pending</option><option>Complete</option><option>Attention required</option></select></div><div class="modalfoot"><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="save">Save record</button></div></div></div>
+<script>
+const sections=["Dashboard","Jobs & Sites","Money","Plant & Equipment","Vehicles","Staff & Subcontractors","Health & Safety","Documents","Suppliers & Materials"];
+const seed={
+"Jobs & Sites":[{name:"Riverside House",detail:"Building refurbishment · London",status:"In progress"},{name:"Westgate Commercial",detail:"Groundworks · Reading",status:"Active"},{name:"Oakfield Development",detail:"Civil engineering · Surrey",status:"Pending"}],
+"Money":[{name:"Riverside House — Invoice 1042",detail:"£18,450 · Due 28 Nov",status:"Pending"},{name:"Westgate — Quote Q208",detail:"£32,800 · Awaiting approval",status:"In progress"}],
+"Plant & Equipment":[{name:"1.8T Excavator",detail:"PL-014 · Service due 24 Nov",status:"Attention required"},{name:"Dumper",detail:"PL-008 · Riverside House",status:"Active"}],
+"Vehicles":[{name:"Ford Transit",detail:"MOD 01 · MOT due 12 Dec",status:"Active"}],
+"Staff & Subcontractors":[{name:"Site team — Riverside",detail:"Supervisor: To be assigned",status:"Active"}],
+"Health & Safety":[{name:"Riverside site inspection",detail:"Action: update site signage",status:"Attention required"},{name:"Plant daily checks",detail:"Weekly review",status:"Pending"}],
+"Documents":[{name:"Company insurance",detail:"Policy documents",status:"Active"}],
+"Suppliers & Materials":[{name:"Builders merchant",detail:"Materials account",status:"Active"}]
+};
+let records=JSON.parse(localStorage.getItem("modifyRecords")||"null")||seed;
+let current="Dashboard";
+const $=id=>document.getElementById(id);
+function persist(){localStorage.setItem("modifyRecords",JSON.stringify(records))}
+function statusClass(s){return s==="Attention required"?"pill amber":s==="Pending"?"pill amber":"pill"}
+function dashboard(){
+ const jobs=records["Jobs & Sites"]||[], money=records.Money||[], plant=records["Plant & Equipment"]||[], safety=records["Health & Safety"]||[];
+ return '<div class="stats"><div class="card"><div class="statlabel">Active jobs & sites</div><div class="statvalue">'+jobs.length+'</div><div class="statnote">Across all projects</div></div><div class="card"><div class="statlabel">Money items to follow up</div><div class="statvalue">'+money.filter(x=>x.status!=="Complete").length+'</div><div class="statnote">Quotes and invoices</div></div><div class="card"><div class="statlabel">Plant requiring attention</div><div class="statvalue">'+plant.filter(x=>x.status==="Attention required").length+'</div><div class="statnote">Servicing and checks</div></div><div class="card"><div class="statlabel">Open safety actions</div><div class="statvalue">'+safety.filter(x=>x.status!=="Complete").length+'</div><div class="statnote">Keep actions up to date</div></div></div><div class="columns"><div class="card"><div class="cardhead"><h2>Jobs & sites</h2><span class="muted">Current overview</span></div>'+jobs.map(j=>'<div class="job"><div><div class="jobname">'+escapeHtml(j.name)+'</div><div class="jobmeta">'+escapeHtml(j.detail)+'</div><div class="progress"><span style="width:'+(j.status==="Complete"?100:j.status==="Active"?65:35)+'%"></span></div></div><span class="'+statusClass(j.status)+'">'+escapeHtml(j.status)+'</span></div>').join('')+'</div><div class="card"><div class="cardhead"><h2>Needs attention</h2><span class="muted">Follow up</span></div>'+[...plant,...safety,...money].filter(x=>x.status==="Attention required"||x.status==="Pending").slice(0,6).map(x=>'<div class="task"><span class="dot"></span><div><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml(x.detail)+' · '+escapeHtml(x.status)+'</small></div></div>').join('')+'</div></div>';
+}
+function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){
+ $("title").textContent=current==="Dashboard"?"Good afternoon":current;
+ $("subtitle").textContent=current==="Dashboard"?"Here’s what’s happening across your projects today.":"View and update your "+current.toLowerCase()+" records.";
+ $("crumb").textContent=current;
+ if(current==="Dashboard"){$("pagebody").innerHTML=dashboard();$("add").style.display="none";return}
+ $("add").style.display="inline-block";
+ const list=records[current]||[];
+ $("pagebody").innerHTML='<div class="toolbar"><input id="search" placeholder="Search '+current.toLowerCase()+'..." /></div><div class="tablewrap"><table><thead><tr><th>Name</th><th>Details</th><th>Status</th></tr></thead><tbody>'+list.map(x=>'<tr><td><strong>'+escapeHtml(x.name)+'</strong></td><td>'+escapeHtml(x.detail)+'</td><td><span class="'+statusClass(x.status)+'">'+escapeHtml(x.status)+'</span></td></tr>').join('')+'</tbody></table>'+(list.length?'':'<div class="empty">No records yet. Use “Add new” to create your first record.</div>')+'</div>';
+ $("search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();document.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")});
+}
+$("nav").addEventListener("click",e=>{const b=e.target.closest("button[data-page]");if(!b)return;current=b.dataset.page;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");render()});
+$("menu").onclick=()=>$("sidebar").classList.toggle("open");
+$("add").onclick=()=>{$("modalTitle").textContent="Add to "+current;$("recordName").value="";$("recordDetail").value="";$("recordStatus").value="Active";$("modal").classList.add("show")};
+$("cancel").onclick=()=>$("modal").classList.remove("show");
+$("save").onclick=()=>{const name=$("recordName").value.trim();if(!name){$("recordName").focus();return}records[current]=records[current]||[];records[current].push({name,detail:$("recordDetail").value.trim(),status:$("recordStatus").value});persist();$("modal").classList.remove("show");render()};
+$("export").onclick=()=>{const rows=[["Section","Name","Details","Status"]];sections.slice(1).forEach(s=>(records[s]||[]).forEach(x=>rows.push([s,x.name,x.detail,x.status])));const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="modify-records.csv";a.click();URL.revokeObjectURL(a.href)};
+render();
+</script>
+</body>
+</html>
