@@ -219,5 +219,66 @@ renderV2();
 })();
 </script>
 
+
+<script>
+(()=>{
+ if(!records["Job Updates"])records["Job Updates"]=[];
+ if(!document.querySelector('[data-page="Job Updates"]')){
+  const b=document.createElement("button");b.dataset.page="Job Updates";b.innerHTML='<span class="ico">▣</span>Job Updates';document.getElementById("nav").appendChild(b);
+ }
+ const style=document.createElement("style");style.textContent='.update-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}.update-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.update-meta{font-size:12px;color:var(--muted);margin:5px 0 10px}.update-photo{max-width:100%;max-height:210px;border-radius:8px;margin:8px 8px 0 0}.job-filter{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:#fff;margin:0 0 14px}.stage-list{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}.stage-chip{background:#fff3e8;color:#9a511c;padding:5px 9px;border-radius:18px;font-size:11px}';document.head.appendChild(style);
+ const jobs=()=>records["Upcoming Jobs"]||[];
+ const getJob=(n)=>jobs().find(j=>j["Job number"]===n);
+ const updates=()=>records["Job Updates"];
+ async function addUpdate(jobNo){
+  const job=getJob(jobNo);if(!job){alert("Create a job with a job number first.");return}
+  const worker=prompt("Your name (or the person submitting this update):");if(worker===null)return;
+  const stage=prompt("Stage / check title (e.g. Groundworks, first fix, handover):");if(!stage)return;
+  const status=prompt("Stage status (Not started / In progress / Passed / Issue / Complete):","In progress");if(status===null)return;
+  const note=prompt("Progress update, checks completed, issues or actions:")||"";
+  const picker=document.createElement("input");picker.type="file";picker.multiple=true;picker.accept="image/*,.pdf,.doc,.docx,.xls,.xlsx";picker.click();
+  const files=await new Promise(resolve=>{picker.onchange=()=>resolve([...picker.files]);setTimeout(()=>{if(!picker.files.length)resolve([])},30000)});
+  let attachments=[];try{attachments=await saveFiles(files)}catch(e){alert("Files could not be saved on this device.");}
+  updates().push({jobNumber:jobNo,jobName:job["Job / project name"],worker,stage,status,note,date:new Date().toISOString(),attachments});
+  localStorage.setItem("modifyRecordsV2",JSON.stringify(records));renderV2();
+ }
+ window.renderV2=function(){
+  if(current!=="Job Updates")return;
+  $("title").textContent="Job progress & stage checks";
+  $("subtitle").textContent="Workers can record progress, stage checks, issues and site photos against a job number.";
+  $("crumb").textContent=current;$("add").style.display="none";
+  const body=$("pagebody");
+  body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · SITE DIARY</div><div class="card"><div class="cardhead"><h2>Select a job</h2></div><select class="job-filter" id="jobDiarySelect"><option value="">Choose job number and project</option>'+jobs().map(j=>'<option value="'+escapeHtml(j["Job number"]||"")+'">'+escapeHtml((j["Job number"]||"No job number")+" — "+(j["Job / project name"]||"Unnamed job"))+'</option>').join("")+'</select><p class="helptext">Create jobs in Upcoming Jobs first. Every site update is linked to its job number.</p><button class="btn primary" id="newSiteUpdate">＋ Add progress update / stage check</button></div><div class="card" style="margin-top:14px"><div class="cardhead"><h2>Project update history</h2><span class="muted">'+updates().length+' updates</span></div><div id="jobUpdateList"></div></div>';
+  const list=$("jobUpdateList");
+  const renderList=(num)=>{const items=updates().filter(x=>!num||x.jobNumber===num).slice().reverse();list.innerHTML=items.length?items.map(x=>'<div class="update-card"><div class="update-top"><strong>'+escapeHtml(x.stage)+'</strong><span class="stage-chip">'+escapeHtml(x.status)+'</span></div><div class="update-meta">'+escapeHtml(x.jobNumber)+' · '+escapeHtml(x.jobName)+' · '+escapeHtml(x.worker)+' · '+new Date(x.date).toLocaleString()+'</div><div>'+escapeHtml(x.note)+'</div><div class="stage-list">'+(x.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</div></div>').join(""):'<div class="empty">No progress updates yet for this job.</div>';
+   list.querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{const file=await getFile(b.dataset.file);if(file){const url=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=url;a.download=file.name;a.target="_blank";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}});
+  };
+  $("jobDiarySelect").onchange=e=>renderList(e.target.value);
+  $("newSiteUpdate").onclick=()=>{const n=$("jobDiarySelect").value;if(!n){alert("Please select a job first.");return}addUpdate(n)};
+  renderList("");
+ };
+ const oldClick=document.getElementById("nav");
+ oldClick.addEventListener("click",e=>{const b=e.target.closest('button[data-page="Job Updates"]');if(b){current="Job Updates";document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");renderV2()}});
+ const oldRender=window.renderV2; 
+ // The most recent renderer is now wrapped so the job diary gets its dedicated view.
+ window.renderV2=function(){if(current==="Job Updates"){const original=oldRender;original();if($("pagebody").innerHTML.includes("Site diary"))return; } };
+ // Restore dispatch by invoking the dedicated renderer on this section; other sections continue using the existing renderer.
+ const diaryRender=window.renderV2;
+ window.renderV2=function(){if(current==="Job Updates"){ 
+  $("title").textContent="Job progress & stage checks";$("subtitle").textContent="Worker site diary, progress updates, stage checks and photographs linked to each job number.";$("crumb").textContent=current;$("add").style.display="none";
+  const body=$("pagebody");body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · SITE DIARY</div><div class="card"><div class="cardhead"><h2>Select a job</h2></div><select class="job-filter" id="jobDiarySelect"><option value="">Choose job number and project</option>'+jobs().map(j=>'<option value="'+escapeHtml(j["Job number"]||"")+'">'+escapeHtml((j["Job number"]||"No job number")+" — "+(j["Job / project name"]||"Unnamed job"))+'</option>').join("")+'</select><p class="helptext">Create jobs in Upcoming Jobs first. Every site update is linked to its job number.</p><button class="btn primary" id="newSiteUpdate">＋ Add progress update / stage check</button></div><div class="card" style="margin-top:14px"><div class="cardhead"><h2>Project update history</h2></div><div id="jobUpdateList"></div></div>';
+  const list=$("jobUpdateList");const renderList=num=>{const items=updates().filter(x=>!num||x.jobNumber===num).slice().reverse();list.innerHTML=items.length?items.map(x=>'<div class="update-card"><div class="update-top"><strong>'+escapeHtml(x.stage)+'</strong><span class="stage-chip">'+escapeHtml(x.status)+'</span></div><div class="update-meta">'+escapeHtml(x.jobNumber)+' · '+escapeHtml(x.jobName)+' · '+escapeHtml(x.worker)+' · '+new Date(x.date).toLocaleString()+'</div><div>'+escapeHtml(x.note)+'</div><div class="stage-list">'+(x.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</div></div>').join(""):'<div class="empty">No progress updates yet for this job.</div>';list.querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{const file=await getFile(b.dataset.file);if(file){const u=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=u;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}})};
+  $("jobDiarySelect").onchange=e=>renderList(e.target.value);$("newSiteUpdate").onclick=()=>{const n=$("jobDiarySelect").value;if(!n){alert("Please select a job first.");return}addUpdate(n)};renderList("");return;
+ } originalRenderer()};
+ const originalRenderer=window.renderV2;
+ window.renderV2=function(){if(current==="Job Updates"){ 
+  $("title").textContent="Job progress & stage checks";$("subtitle").textContent="Worker site diary, progress updates, stage checks and photos linked to job numbers.";$("crumb").textContent=current;$("add").style.display="none";
+  const body=$("pagebody");body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · SITE DIARY</div><div class="card"><div class="cardhead"><h2>Select a job</h2></div><select class="job-filter" id="jobDiarySelect"><option value="">Choose job number and project</option>'+jobs().map(j=>'<option value="'+escapeHtml(j["Job number"]||"")+'">'+escapeHtml((j["Job number"]||"No job number")+" — "+(j["Job / project name"]||"Unnamed job"))+'</option>').join("")+'</select><p class="helptext">Create jobs in Upcoming Jobs first. Every site update is linked to its job number.</p><button class="btn primary" id="newSiteUpdate">＋ Add progress update / stage check</button></div><div class="card" style="margin-top:14px"><div class="cardhead"><h2>Project update history</h2></div><div id="jobUpdateList"></div></div>';
+  const list=$("jobUpdateList");const renderList=num=>{const items=updates().filter(x=>!num||x.jobNumber===num).slice().reverse();list.innerHTML=items.length?items.map(x=>'<div class="update-card"><div class="update-top"><strong>'+escapeHtml(x.stage)+'</strong><span class="stage-chip">'+escapeHtml(x.status)+'</span></div><div class="update-meta">'+escapeHtml(x.jobNumber)+' · '+escapeHtml(x.jobName)+' · '+escapeHtml(x.worker)+' · '+new Date(x.date).toLocaleString()+'</div><div>'+escapeHtml(x.note)+'</div><div class="stage-list">'+(x.attachments||[]).map(a=>'<button class="smallaction" data-file="'+escapeHtml(a.id)+'">'+escapeHtml(a.name)+'</button>').join(" ")+'</div></div>').join(""):'<div class="empty">No progress updates yet for this job.</div>';list.querySelectorAll("[data-file]").forEach(b=>b.onclick=async()=>{const file=await getFile(b.dataset.file);if(file){const u=URL.createObjectURL(file.blob);const a=document.createElement("a");a.href=u;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}})};
+  $("jobDiarySelect").onchange=e=>renderList(e.target.value);$("newSiteUpdate").onclick=()=>{const n=$("jobDiarySelect").value;if(!n){alert("Please select a job first.");return}addUpdate(n)};renderList("");return;
+ } originalRenderer()};
+})();
+</script>
+
 </body>
 </html>
