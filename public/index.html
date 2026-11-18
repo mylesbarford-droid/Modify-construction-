@@ -336,5 +336,36 @@ renderV2();
 })();
 </script>
 
+
+<script>
+(()=>{
+ const moneyRows=()=>records.Money||(records.Money=[]);
+ const oldRender=window.renderV2||renderV2;
+ const oldOpen=window.openRecordForm||openRecordForm;
+ const fmt=n=>new Intl.NumberFormat("en-GB",{style:"currency",currency:"GBP"}).format(Number(n)||0);
+ window.openRecordForm=function(page){
+  if(page!=="Money")return oldOpen(page);
+  const modal=$("modal");
+  modal.querySelector(".modal").innerHTML='<h2>Add money record</h2><p class="helptext">Record a customer invoice, supplier bill, payment or expense. Link it to a job number where applicable.</p><div class="fieldgrid"><div class="field"><label>Record type</label><select id="mtype"><option>Customer invoice</option><option>Customer payment received</option><option>Supplier bill</option><option>Supplier payment made</option><option>Company expense</option><option>Quote</option></select></div><div class="field"><label>Job number (optional)</label><select id="mjob"><option value="">Company / not job-specific</option>'+(records["Upcoming Jobs"]||[]).map(j=>'<option value="'+escapeHtml(j["Job number"]||"")+'">'+escapeHtml((j["Job number"]||"No number")+" — "+(j["Job / project name"]||"Unnamed"))+'</option>').join("")+'</select></div><div class="field"><label>Description</label><input id="mdesc" required placeholder="e.g. Stage 1 invoice"></div><div class="field"><label>Amount (£)</label><input id="mamount" type="number" min="0" step="0.01" required></div><div class="field"><label>Reference / invoice number</label><input id="mref"></div><div class="field"><label>Supplier / customer</label><input id="mparty"></div><div class="field"><label>Issue date</label><input id="mdate" type="date"></div><div class="field"><label>Due date</label><input id="mdue" type="date"></div><div class="field"><label>Status</label><select id="mstatus"><option>Draft</option><option>Unpaid</option><option>Part paid</option><option>Paid</option><option>Overdue</option><option>Cancelled</option></select></div><div class="field full"><label>Notes</label><textarea id="mnotes"></textarea></div></div><div class="modalfoot"><button class="btn" id="cancelNew">Cancel</button><button class="btn primary" id="saveNew">Save record</button></div>';
+  modal.classList.add("show");$("cancelNew").onclick=()=>modal.classList.remove("show");
+  $("saveNew").onclick=()=>{const amount=Number($("mamount").value);if(!$("mdesc").value.trim()||!Number.isFinite(amount)||amount<0){alert("Enter a description and a valid amount.");return}
+   moneyRows().push({type:$("mtype").value,jobNumber:$("mjob").value,description:$("mdesc").value.trim(),amount,reference:$("mref").value.trim(),party:$("mparty").value.trim(),date:$("mdate").value,dueDate:$("mdue").value,status:$("mstatus").value,notes:$("mnotes").value.trim()});
+   localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");window.renderV2();
+  };
+ };
+ window.renderV2=function(){
+  if(current!=="Money"){return oldRender()}
+  $("title").textContent="Money";$("subtitle").textContent="Simple standalone records of invoices, payments and company expenses.";$("crumb").textContent="Money";$("add").style.display="inline-block";
+  const rows=moneyRows();const incoming=rows.filter(x=>["Customer invoice","Customer payment received","Quote"].includes(x.type)).reduce((a,x)=>a+(Number(x.amount)||0),0);
+  const outgoing=rows.filter(x=>["Supplier bill","Supplier payment made","Company expense"].includes(x.type)).reduce((a,x)=>a+(Number(x.amount)||0),0);
+  const outstanding=rows.filter(x=>["Customer invoice","Supplier bill"].includes(x.type)&&!["Paid","Cancelled"].includes(x.status)).reduce((a,x)=>a+(Number(x.amount)||0),0);
+  const body=$("pagebody");body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · MONEY</div><div class="stats"><div class="card"><div class="statlabel">Income recorded</div><div class="statvalue">'+fmt(incoming)+'</div><div class="statnote">Invoices, receipts and quotes</div></div><div class="card"><div class="statlabel">Costs recorded</div><div class="statvalue">'+fmt(outgoing)+'</div><div class="statnote">Bills, payments and expenses</div></div><div class="card"><div class="statlabel">Unsettled invoices / bills</div><div class="statvalue">'+fmt(outstanding)+'</div><div class="statnote">Items not marked paid</div></div><div class="card"><div class="statlabel">Records</div><div class="statvalue">'+rows.length+'</div><div class="statnote">Money entries</div></div></div><div class="card" style="margin-top:14px"><div class="cardhead"><h2>Money records</h2><span class="helptext">Use Add new to record an item</span></div><input id="moneySearch" class="job-filter" placeholder="Search description, reference, job or supplier"><div class="tablewrap"><table><thead><tr><th>Type</th><th>Description</th><th>Job no.</th><th>Customer / supplier</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>'+rows.slice().reverse().map(x=>'<tr><td>'+escapeHtml(x.type||"")+'</td><td>'+escapeHtml(x.description||"")+'<small>'+escapeHtml(x.reference||"")+'</small></td><td>'+escapeHtml(x.jobNumber||"—")+'</td><td>'+escapeHtml(x.party||"—")+'</td><td>'+fmt(x.amount)+'</td><td>'+escapeHtml(x.dueDate||"—")+'</td><td>'+escapeHtml(x.status||"")+'</td></tr>').join("")+'</tbody></table>'+(rows.length?"":'<div class="empty">No money records yet. Add your first invoice, payment or expense.</div>')+'</div></div>';
+  $("moneySearch").oninput=e=>{const q=e.target.value.toLowerCase();body.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")};
+ };
+ $("add").onclick=()=>window.openRecordForm(current);
+ window.renderV2();
+})();
+</script>
+
 </body>
 </html>
