@@ -38,6 +38,7 @@
     "Specialist Tooling":"tooling","Timesheets":"timesheets","Daily Reports":"daily_reports"
   };
   let syncingModules=false, syncQueue=Promise.resolve();
+  const pendingModuleDeletes=[];
   const originalSetItem=Storage.prototype.setItem;
   function moduleJobNumber(record){
     const direct=record["Job number"]||record.jobNumber||record.job_number;
@@ -51,6 +52,7 @@
     if(syncingModules)return;
     syncingModules=true;
     try{
+      while(pendingModuleDeletes.length){const item=pendingModuleDeletes.shift();try{await api("/api/modules/"+item.module+"/records/"+encodeURIComponent(item.id),{method:"DELETE"})}catch(e){console.warn("Shared delete skipped:",e.message)}}
       const jobs=await api("/api/jobs");sharedJobs=jobs.jobs||[];
       const raw=localStorage.getItem("modifyRecordsV2");
       const state=raw?JSON.parse(raw):{};
@@ -82,6 +84,15 @@
     finally{syncingModules=false}
   }
   Storage.prototype.setItem=function(key,value){
+    if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
+      try{
+        const before=JSON.parse(this.getItem(key)||"{}"),after=JSON.parse(value||"{}");
+        for(const [page,module] of Object.entries(moduleMap)){
+          const oldRows=Array.isArray(before[page])?before[page]:[],newIds=new Set((Array.isArray(after[page])?after[page]:[]).map(x=>String(x.id||"")).filter(Boolean));
+          oldRows.forEach(row=>{if(row.id&&!newIds.has(String(row.id)))pendingModuleDeletes.push({module,id:String(row.id)})});
+        }
+      }catch(e){console.warn("Could not compare register changes",e)}
+    }
     originalSetItem.call(this,key,value);
     if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
       syncQueue=syncQueue.then(()=>syncOperationalRegisters()).catch(e=>console.warn("Register sync failed",e));
