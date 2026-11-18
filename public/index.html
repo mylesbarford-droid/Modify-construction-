@@ -79,5 +79,83 @@ $("save").onclick=()=>{const name=$("recordName").value.trim();if(!name){$("reco
 $("export").onclick=()=>{const rows=[["Section","Name","Details","Status"]];sections.slice(1).forEach(s=>(records[s]||[]).forEach(x=>rows.push([s,x.name,x.detail,x.status])));const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="modify-records.csv";a.click();URL.revokeObjectURL(a.href)};
 render();
 </script>
+
+<style>
+.brandmark{display:inline-grid;place-items:center;background:#ef7d32;color:#111923;font-weight:950;border-radius:8px;width:27px;height:27px;margin-right:8px}.watermark{display:flex;align-items:center;gap:8px;color:#9aa4af;font-size:11px;letter-spacing:1.5px;font-weight:800;margin:0 0 14px}.fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.field.full{grid-column:1/-1}.field textarea{padding:11px;border:1px solid var(--line);border-radius:8px;width:100%;min-height:75px;font:inherit}.tablewrap td{vertical-align:top}.smallaction{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 9px}.helptext{font-size:12px;color:var(--muted);margin:5px 0 14px}@media(max-width:560px){.fieldgrid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style>
+<script>
+/* MODIFY v2: clean operational registers; no invented company records */
+records={
+"Jobs & Sites":[],
+"Money":[],
+"Plant & Equipment":[],
+"Vehicles":[],
+"Staff & Subcontractors":[],
+"Health & Safety":[],
+"Documents":[],
+"Suppliers & Materials":[],
+"Workers":[],
+"Specialist Tooling":[],
+"Upcoming Jobs":[],
+"Job Materials":[]
+};
+localStorage.setItem("modifyRecordsV2",JSON.stringify(records));
+const extraPages=["Workers","Specialist Tooling","Upcoming Jobs","Job Materials"];
+extraPages.forEach((p)=>{if(!document.querySelector('[data-page="'+p+'"]')){const b=document.createElement("button");b.dataset.page=p;b.innerHTML='<span class="ico">✦</span>'+p;document.getElementById("nav").appendChild(b)}});
+const fields={
+"Workers":[["Full name","text"],["Job role","text"],["Mobile number","tel"],["Work email","email"],["Address","text"],["Date of birth (optional)","date"],["Emergency contact name","text"],["Emergency contact number","tel"],["Employment status","select:Employed|Subcontractor|Agency|Inactive"],["Notes","textarea"]],
+"Specialist Tooling":[["Tool / equipment name","text"],["Asset or serial number","text"],["Category","text"],["Condition","select:Good|Needs repair|Out of service"],["Current holder","text"],["Allocated job / site","text"],["Storage location","text"],["Last inspection date","date"],["Next inspection due","date"],["Notes","textarea"]],
+"Upcoming Jobs":[["Job / project name","text"],["Client","text"],["Site address","text"],["Job type","text"],["Start date","date"],["Expected finish date","date"],["Project manager","text"],["Status","select:Quoting|Scheduled|Ready to start|In progress|On hold|Complete"],["Notes","textarea"]],
+"Vehicles":[["Vehicle make and model","text"],["Registration number","text"],["VIN / chassis number","text"],["Current mileage","number"],["Keeper / assigned driver","text"],["V5C document reference / file note","text"],["V5C document upload","file"],["MOT expiry date","date"],["Last service date","date"],["Next service due (date or mileage)","text"],["Insurance renewal date","date"],["Tax due date","date"],["Notes","textarea"]],
+"Job Materials":[["Job / project","text"],["Material","text"],["Specification / quantity","text"],["Supplier","text"],["Required on site date","date"],["Delivery location / site contact","text"],["Order status","select:To price|To order|Ordered|Part delivered|Delivered|Cancelled"],["Purchase order reference","text"],["Notes","textarea"]],
+"Jobs & Sites":[["Job / project name","text"],["Client","text"],["Site address","text"],["Job type","text"],["Start date","date"],["Expected finish date","date"],["Project manager","text"],["Status","select:Quoting|Scheduled|Ready to start|In progress|On hold|Complete"],["Notes","textarea"]],
+"Staff & Subcontractors":[["Name","text"],["Role / trade","text"],["Company","text"],["Phone","tel"],["Email","email"],["Notes","textarea"]],
+"Plant & Equipment":[["Equipment name","text"],["Asset number","text"],["Location / allocated job","text"],["Service due","date"],["Status","select:Available|Allocated|Attention required|Out of service"],["Notes","textarea"]]
+};
+const tableCols={
+"Workers":["Full name","Job role","Mobile number","Work email","Employment status"],
+"Specialist Tooling":["Tool / equipment name","Asset or serial number","Current holder","Allocated job / site","Condition","Next inspection due"],
+"Upcoming Jobs":["Job / project name","Client","Site address","Start date","Expected finish date","Project manager","Status"],
+"Vehicles":["Vehicle make and model","Registration number","Keeper / assigned driver","MOT expiry date","Next service due (date or mileage)","V5C document reference / file note"],
+"Job Materials":["Job / project","Material","Specification / quantity","Supplier","Required on site date","Order status","Purchase order reference"]
+};
+const esc=escapeHtml;
+function fieldHtml(item,i){const [label,type]=item;const id="f"+i;let input;
+if(type==="textarea")input='<textarea id="'+id+'" name="'+esc(label)+'"></textarea>';
+else if(type==="file")input='<input id="'+id+'" type="file" accept=".pdf,.jpg,.jpeg,.png">';
+else if(type.startsWith("select:"))input='<select id="'+id+'">'+type.slice(7).split("|").map(v=>'<option>'+v+'</option>').join("")+'</select>';
+else input='<input id="'+id+'" type="'+type+'">';
+return '<div class="field '+(type==="textarea"?"full":"")+'"><label for="'+id+'">'+esc(label)+'</label>'+input+'</div>'}
+function openRecordForm(page){
+ const list=fields[page]||[["Name","text"],["Details","text"],["Status","select:Active|Pending|Complete"]];
+ $("modalTitle").textContent="Add "+page;
+ const modal=$("modal");modal.querySelector(".modal").innerHTML='<h2 id="modalTitle">Add '+esc(page)+'</h2><p class="helptext">Enter the details you have. You can complete missing information later.</p><div class="fieldgrid">'+list.map(fieldHtml).join("")+'</div><div class="modalfoot"><button class="btn" id="cancelNew">Cancel</button><button class="btn primary" id="saveNew">Save record</button></div>';
+ modal.classList.add("show");
+ $("cancelNew").onclick=()=>modal.classList.remove("show");
+ $("saveNew").onclick=()=>{const obj={};list.forEach((item,i)=>{const el=$("f"+i);obj[item[0]]=el.type==="file"?(el.files[0]?.name||""):el.value.trim()});if(!Object.values(obj).some(Boolean)){return}records[page]=records[page]||[];records[page].push(obj);localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");renderV2()};
+}
+function renderV2(){
+ $("title").textContent=current==="Dashboard"?"Management overview":current;
+ $("subtitle").textContent=current==="Dashboard"?"A clear view of your workforce, fleet, tools and work pipeline.":"Add and maintain "+current.toLowerCase()+".";
+ $("crumb").textContent=current;
+ const body=$("pagebody");
+ if(current==="Dashboard"){
+ const counts=[["Upcoming jobs",records["Upcoming Jobs"].length],["Workers",records.Workers.length],["Vehicles",records.Vehicles.length],["Specialist tools",records["Specialist Tooling"].length]];
+ body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · MANAGEMENT</div><div class="stats">'+counts.map(x=>'<div class="card"><div class="statlabel">'+x[0]+'</div><div class="statvalue">'+x[1]+'</div><div class="statnote">Records entered</div></div>').join("")+'</div><div class="columns"><div class="card"><div class="cardhead"><h2>Upcoming work</h2><button class="smallaction" data-goto="Upcoming Jobs">View list →</button></div>'+(records["Upcoming Jobs"].length?records["Upcoming Jobs"].slice(0,5).map(x=>'<div class="job"><div><div class="jobname">'+esc(x["Job / project name"]||"Untitled job")+'</div><div class="jobmeta">'+esc(x["Site address"]||"Site not entered")+' · '+esc(x["Start date"]||"Start date TBC")+'</div></div><span class="pill">'+esc(x.Status||"Unscheduled")+'</span></div>').join(""):'<div class="empty">No jobs entered yet. Add your real upcoming jobs to get started.</div>')+'</div><div class="card"><div class="cardhead"><h2>Quick access</h2></div>'+["Workers","Vehicles","Specialist Tooling","Job Materials"].map(x=>'<div class="task"><span class="dot"></span><div><strong>'+x+'</strong><small>'+records[x].length+' records · <a href="#" data-goto="'+x+'">Open register</a></small></div></div>').join("")+'</div></div>';
+ body.querySelectorAll("[data-goto]").forEach(b=>b.onclick=e=>{e.preventDefault();current=b.dataset.goto;renderV2()});
+ $("add").style.display="none";
+ }else{
+ $("add").style.display="inline-block";
+ const list=records[current]||[], cols=tableCols[current]||Object.keys(list[0]||{Name:"",Details:"",Status:""});
+ body.innerHTML='<div class="watermark"><span class="brandmark">M</span> MODIFY CONSTRUCTION · '+esc(current.toUpperCase())+'</div><div class="toolbar"><input id="searchV2" placeholder="Search '+esc(current.toLowerCase())+'..."></div><div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+esc(c)+'</th>').join("")+'</tr></thead><tbody>'+list.map(row=>'<tr>'+cols.map(c=>'<td>'+esc(row[c]||"—")+'</td>').join("")+'</tr>').join("")+'</tbody></table>'+(list.length?"":'<div class="empty">No records yet. Select “Add new” to enter your first record.</div>')+'</div>';
+ $("searchV2").oninput=e=>{const q=e.target.value.toLowerCase();body.querySelectorAll("tbody tr").forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none")};
+ }
+}
+$("add").onclick=()=>openRecordForm(current);
+document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>{current=b.dataset.page;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("sidebar").classList.remove("open");renderV2()}));
+$("nav").addEventListener("click",e=>{const b=e.target.closest("button[data-page]");if(b){current=b.dataset.page;document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));renderV2()}});
+renderV2();
+</script>
+
 </body>
 </html>
