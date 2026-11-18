@@ -231,6 +231,66 @@ async function handleApi(request, env) {
     const assignments=await env.DB.prepare("SELECT a.user_id,a.job_number,u.full_name,u.staff_code FROM job_assignments a JOIN users u ON u.id=a.user_id WHERE a.job_number=? ORDER BY u.full_name").bind(jobNumber).all();
     return json({job,updates:updates.results||[],assignments:assignments.results||[]});
   }
+  // Shared operational registers. Each record remains attached to its job number where supplied.
+  const moduleRoute = url.pathname.match(/^\\/api\\/modules\\/([a-z_]+)\\/records(?:\\/([^/]+))?$/);
+  if (moduleRoute) {
+    const moduleName = moduleRoute[1];
+    const recordId = moduleRoute[2] ? decodeURIComponent(moduleRoute[2]) : null;
+    const modulePermissions = {
+      money: "money", plant: "plant", vehicles: "vehicles", workforce: "workforce",
+      safety: "safety", documents: "documents", suppliers: "suppliers",
+      materials: "suppliers", tooling: "plant", timesheets: "timesheets", daily_reports: "daily_reports"
+    };
+    const permission = modulePermissions[moduleName];
+    if (!permission) return json({error:"Unknown operational register."},404);
+    if (request.method === "GET") {
+      if (!can(session.role, permission+":read")) return json({error:"You do not have permission to view this register."},403);
+      let rows;
+      if (session.role === "employee") {
+        rows = await env.DB.prepare("SELECT record_id,job_number,payload,created_at,updated_at FROM module_records WHERE module_name=? AND job_number IN (SELECT job_number FROM job_assignments WHERE user_id=?) ORDER BY updated_at DESC LIMIT 1000").bind(moduleName,session.user_id).all();
+      } else {
+        rows = await env.DB.prepare("SELECT record_id,job_number,payload,created_at,updated_at FROM module_records WHERE module_name=? ORDER BY updated_at DESC LIMIT 2000").bind(moduleName).all();
+      }
+      return json({records:(rows.results||[]).map(row=>({id:row.record_id,jobNumber:row.job_number,record:JSON.parse(row.payload),createdAt:row.created_at,updatedAt:row.updated_at}))});
+    }
+    if (request.method === "POST" && !recordId) {
+      if (!can(session.role, permission+":write")) return json({error:"You do not have permission to change this register."},403);
+      const input=await body(request);
+      if (!input || !input.record || typeof input.record!=="object" || Array.isArray(input.record)) return json({error:"A record is required."},400);
+      const jobNumber=String(input.jobNumber||input.record["Job number"]||input.record.jobNumber||input.record.job_number||"").trim();
+      if (session.role==="employee") {
+        if (!jobNumber) return json({error:"Choose an assigned job for this record."},400);
+        const assigned=await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id,jobNumber).first();
+        if (!assigned) return json({error:"You can only update records for jobs assigned to you."},403);
+      }
+      if (jobNumber) {
+        const exists=await env.DB.prepare("SELECT 1 AS ok FROM jobs WHERE job_number=?").bind(jobNumber).first();
+        if (!exists) return json({error:"Select a job from the shared Jobs & Sites register."},400);
+      }
+      const payload=JSON.stringify(input.record);
+      if (payload.length>50000) return json({error:"Record is too large. Reduce attached text or files."},413);
+      const id=String(input.id||input.record.id||randomToken(16)).slice(0,100);
+      const now=Math.floor(Date.now()/1000);
+      await env.DB.prepare("INSERT INTO module_records (module_name,record_id,job_number,payload,created_by,updated_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(module_name,record_id) DO UPDATE SET job_number=excluded.job_number,payload=excluded.payload,updated_by=excluded.updated_by,updated_at=excluded.updated_at")
+        .bind(moduleName,id,jobNumber,payload,session.user_id,session.user_id,now,now).run();
+      await audit(env,session,"module_record_saved",moduleName+":"+id);
+      return json({ok:true,id,jobNumber},201);
+    }
+    if (request.method === "DELETE" && recordId) {
+      if (!can(session.role, permission+":write")) return json({error:"You do not have permission to change this register."},403);
+      let result;
+      if (session.role==="employee") {
+        result=await env.DB.prepare("DELETE FROM module_records WHERE module_name=? AND record_id=? AND job_number IN (SELECT job_number FROM job_assignments WHERE user_id=?)").bind(moduleName,recordId,session.user_id).run();
+      } else {
+        result=await env.DB.prepare("DELETE FROM module_records WHERE module_name=? AND record_id=?").bind(moduleName,recordId).run();
+      }
+      if (!result.meta?.changes) return json({error:"Record not found or not assigned to you."},404);
+      await audit(env,session,"module_record_deleted",moduleName+":"+recordId);
+      return json({ok:true});
+    }
+    return json({error:"Method not allowed."},405);
+  }
+
   if (url.pathname === "/api/job-updates" && request.method === "GET") {
     if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." }, 403);
     let result;
