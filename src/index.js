@@ -232,7 +232,7 @@ async function handleApi(request, env) {
     return json({job,updates:updates.results||[],assignments:assignments.results||[]});
   }
   // Shared operational registers. Each record remains attached to its job number where supplied.
-  const moduleRoute = url.pathname.match(/^\\/api\\/modules\\/([a-z_]+)\\/records(?:\\/([^/]+))?$/);
+  const moduleRoute = url.pathname.match(/^\/api\/modules\/([a-z_]+)\/records(?:\/([^/]+))?$/);
   if (moduleRoute) {
     const moduleName = moduleRoute[1];
     const recordId = moduleRoute[2] ? decodeURIComponent(moduleRoute[2]) : null;
