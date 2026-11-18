@@ -582,6 +582,8 @@ renderV2();
    var side=document.getElementById("sidebar");if(side)side.classList.remove("open");
    var heading=document.getElementById("title");if(heading)heading.textContent=page==="Dashboard"?"Management overview":page;
    var crumb=document.getElementById("crumb");if(crumb)crumb.textContent=page;
+   if(page==="Money"||page==="Job Updates"){if(typeof window.renderV2==="function"){window.renderV2();return}}
+   if(typeof renderV2==="function"){renderV2();return}
    if(typeof window.renderV2==="function"){window.renderV2();return}
    if(typeof render==="function"){render();return}
    throw new Error("No page renderer is available");
