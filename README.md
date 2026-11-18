@@ -20,12 +20,19 @@ Roles:
 
 ### Required Cloudflare setup
 
-1. Create a Cloudflare D1 database, then apply `migrations/0001_auth.sql`.
+1. Create a Cloudflare D1 database and apply `migrations/0001_auth.sql` followed by `migrations/0002_job_updates.sql`.
 2. Add a D1 binding named `DB` to the Worker, pointing to that database.
-3. Add Worker secrets named `COMPANY_LOGIN_PASSWORD` and `BOOTSTRAP_KEY`. Use different, long random values.
-4. Deploy this branch.
-5. Create the first administrator by sending a POST to `/api/setup/first-admin` with header `x-bootstrap-key: <BOOTSTRAP_KEY>` and JSON body `{"name":"Administrator name","staffCode":"ADMIN","pin":"123456"}`. Choose a unique PIN; do not use the example PIN.
-6. Immediately remove the `BOOTSTRAP_KEY` secret from the Worker after setup.
+3. Create a **private** Cloudflare R2 bucket for job photos and bind it to the Worker as `JOB_PHOTOS`. Do not enable public bucket access.
+4. Add Worker secrets named `COMPANY_LOGIN_PASSWORD` and `BOOTSTRAP_KEY`. Use different, long random values.
+5. Deploy only to a non-production test environment first.
+6. Create the first administrator by sending a POST to `/api/setup/first-admin` with header `x-bootstrap-key: <BOOTSTRAP_KEY>` and JSON body `{"name":"Administrator name","staffCode":"ADMIN","pin":"choose-a-unique-six-digit-pin"}`.
+7. Immediately remove the `BOOTSTRAP_KEY` secret from the Worker after setup.
+
+### Shared job-update API (backend foundation)
+
+The Worker now includes role-checked endpoints for listing and creating job updates, manager approval/rejection, and private photo upload/retrieval through the `JOB_PHOTOS` R2 binding. Employees are restricted to jobs present in `job_assignments`; managers have review permission. Each decision and photo upload is written to the audit log. Apply `migrations/0002_job_updates.sql` before using these endpoints.
+
+**Still not ready for production:** the dashboard has not yet been connected to the login or these APIs. The current Job Updates screen still uses browser-local records and IndexedDB photos, and the employee-to-job assignment and staff administration screens are not implemented. The R2 binding and D1 database must be configured in the actual Cloudflare account. Automated and browser end-to-end tests have not been run. Do not deploy this branch to the live site or enter real company information until those items are completed.
 
 The initial administrator is created once only. Further staff provisioning and role management still need a secured administrator workflow.
 
