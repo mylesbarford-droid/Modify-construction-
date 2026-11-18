@@ -333,7 +333,7 @@ function editRecord(index){
  listFields.forEach((f,i)=>{const el=$("f"+i);if(el&&row[f[0]]!==undefined&&el.type!=="file")el.value=String(row[f[0]]??"")});
  modal.classList.add("show");
  $("cancelEdit").onclick=()=>modal.classList.remove("show");
- $("saveEdit").onclick=async()=>{const uploads=[];for(let i=0;i<listFields.length;i++){const f=listFields[i],el=$("f"+i);if(!el)continue;if(el.type==="file"&&el.files?.length){uploads.push(...await window.saveModifyFiles(Array.from(el.files)))}else if(el.type!=="file"){row[f[0]]=el.value.trim()}}if(uploads.length)row.attachments=[...(row.attachments||[]),...uploads];localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");renderV2Base()};
+ $("saveEdit").onclick=async()=>{const uploads=[];for(let i=0;i<listFields.length;i++){const f=listFields[i],el=$("f"+i);if(!el)continue;if(el.type==="file"&&el.files?.length){uploads.push(...await window.saveModifyFiles(Array.from(el.files)))}else if(el.type!=="file"){row[f[0]]=el.value.trim()}}if(uploads.length)row.attachments=[...(row.attachments||[]),...uploads];localStorage.setItem("modifyRecordsV2",JSON.stringify(records));modal.classList.remove("show");if(page==="Workforce"){const nav=document.querySelector('#nav button[data-page="Workforce"]');if(nav)nav.click();else renderV2Base()}else{renderV2Base()}};
 }
 function renderV2Base(){
  // Recalculate the content frame on every section change; avoid inherited fixed widths.
