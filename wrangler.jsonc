@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "modify-construction-management",
+  "name": "modify-construction",
   "main": "src/index.js",
   "compatibility_date": "2026-11-18",
   "assets": {
