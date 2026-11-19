@@ -140,7 +140,7 @@ async function handleApi(request, env) {
     await audit(env, session, "shared_file_uploaded", id + ":" + name);
     return json({ id, name, type, size: data.byteLength }, 201);
   }
-  const sharedFile = url.pathname.match(/^\\/api\\/files\\/([a-f0-9]{32})$/);
+  const sharedFile = url.pathname.match(/^\/api\/files\/([a-f0-9]{32})$/);
   if (sharedFile && request.method === "GET") {
     if (!env.FILES) return json({ error: "Shared file storage is not configured." }, 503);
     const object = await env.FILES.get("shared-files/" + sharedFile[1]);
