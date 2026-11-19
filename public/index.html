@@ -214,6 +214,57 @@ html,body{min-height:100%;height:auto!important;overflow-y:auto!important;oversc
 #modify-install-app:focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media(max-width:650px){#modify-install-app{right:12px;bottom:12px}}
 </style>
+<style id="modify-workforce-calendar-layout-v1">
+/* Workforce weekly calendar: full-width desktop grid and readable phone cards. */
+#modify-schedule{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;color:#f5f1e7}
+#modify-schedule .schedule-card{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:clamp(14px,2vw,24px)!important;background:linear-gradient(145deg,#1c1e22,#14161a)!important;border:1px solid #51452d!important;border-radius:16px!important;box-shadow:0 14px 34px #0005!important;overflow:hidden!important}
+#modify-schedule .schedule-toolbar{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:18px!important;flex-wrap:wrap!important;margin:0 0 18px!important}
+#modify-schedule .schedule-toolbar h2{margin:0 0 6px!important;color:#f4dfaa!important;font-size:clamp(20px,2.5vw,28px)!important;line-height:1.2!important}
+#modify-schedule .schedule-toolbar p{margin:4px 0!important;color:#c3bdaf!important;font-size:13px!important}
+#modify-schedule .schedule-actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important}
+#modify-schedule button{min-height:40px!important;padding:9px 13px!important;border:1px solid #625333!important;border-radius:9px!important;background:#24262a!important;color:#f6edda!important;font-weight:650!important}
+#modify-schedule button.primary,#modify-schedule #schedule-assign{background:#df8738!important;border-color:#df8738!important;color:#17130d!important}
+#modify-schedule .schedule-scroll{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:visible!important;border:1px solid #4b4230!important;border-radius:12px!important;background:#14161a!important}
+#modify-schedule table{width:100%!important;min-width:850px!important;table-layout:fixed!important;border-collapse:separate!important;border-spacing:0!important;background:transparent!important}
+#modify-schedule thead th{padding:13px 10px!important;background:#29251d!important;color:#f2d58f!important;border-bottom:1px solid #66532d!important;text-align:left!important;font-size:12px!important;font-weight:800!important}
+#modify-schedule th.worker-col{width:170px!important;min-width:150px!important}
+#modify-schedule tbody th.worker-col{background:#202126!important;color:#f5f1e7!important;border-bottom:1px solid #37332b!important;padding:12px!important;vertical-align:top!important}
+#modify-schedule tbody th small{color:#b9ad91!important;font-weight:500!important}
+#modify-schedule td{height:86px!important;min-width:90px!important;padding:7px!important;vertical-align:top!important;background:#191b1f!important;border-bottom:1px solid #37332b!important;border-left:1px solid #302d27!important}
+#modify-schedule .shift{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:4px!important;width:100%!important;height:auto!important;min-height:62px!important;margin:0 0 5px!important;padding:9px!important;text-align:left!important;white-space:normal!important;background:linear-gradient(135deg,#ed9a4a,#d8752f)!important;border:1px solid #f0ad68!important;color:#21170f!important;box-shadow:0 3px 10px #0003!important}
+#modify-schedule .shift strong{font-size:12px!important}
+#modify-schedule .shift:not(strong){font-size:11px!important}
+#modify-schedule .empty-slot{display:block!important;width:100%!important;height:68px!important;min-height:68px!important;border:1px dashed #65583d!important;background:#202126!important}
+#modify-schedule .empty-slot:after{content:"+ Add job";color:#b9a878;font-size:11px}
+#modify-schedule #schedule-message{color:#f0c878;margin:8px 0}
+#modify-schedule #schedule-editor{margin-top:16px!important;padding:16px!important;border:1px solid #5b4c30!important;border-radius:12px!important;background:#202126!important;color:#f5f1e7!important}
+#modify-schedule #schedule-editor[hidden]{display:none!important}
+#modify-schedule #schedule-editor h3{margin:0 0 12px!important;color:#f2d58f!important}
+#modify-schedule .schedule-form{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important}
+#modify-schedule .schedule-form label{display:grid!important;gap:5px!important;color:#d7c9a8!important;font-size:12px!important}
+#modify-schedule .schedule-form input,#modify-schedule .schedule-form select,#modify-schedule .schedule-form textarea{width:100%!important;min-width:0!important;padding:10px!important;border:1px solid #62583f!important;border-radius:8px!important;background:#111317!important;color:#fff!important}
+#modify-schedule .schedule-form .wide{grid-column:1/-1!important}
+#modify-schedule .api-actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin-top:12px!important}
+@media(max-width:650px){
+ #modify-schedule .schedule-card{padding:12px!important;border-radius:12px!important}
+ #modify-schedule .schedule-toolbar{display:block!important;margin-bottom:12px!important}
+ #modify-schedule .schedule-toolbar h2{font-size:21px!important}
+ #modify-schedule .schedule-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-top:13px!important}
+ #modify-schedule .schedule-actions button{width:100%!important;padding:9px 6px!important;font-size:12px!important}
+ #modify-schedule .schedule-scroll{overflow:visible!important;border:0!important;background:transparent!important}
+ #modify-schedule table,#modify-schedule tbody{display:block!important;width:100%!important;min-width:0!important}
+ #modify-schedule thead{display:none!important}
+ #modify-schedule tbody tr{display:block!important;width:100%!important;margin:0 0 12px!important;padding:10px!important;border:1px solid #51452d!important;border-radius:11px!important;background:#191b1f!important}
+ #modify-schedule tbody th.worker-col{display:block!important;width:100%!important;min-width:0!important;padding:4px 4px 10px!important;border:0!important;border-bottom:1px solid #51452d!important;background:transparent!important;font-size:15px!important}
+ #modify-schedule tbody td{display:grid!important;grid-template-columns:78px minmax(0,1fr)!important;align-items:center!important;gap:8px!important;width:100%!important;height:auto!important;min-height:58px!important;padding:6px 2px!important;border:0!important;border-bottom:1px solid #302d27!important;background:transparent!important}
+ #modify-schedule tbody td:last-child{border-bottom:0!important}
+ #modify-schedule tbody td:before{content:attr(data-day);color:#d6bd7e;font-size:11px;font-weight:800}
+ #modify-schedule .shift{min-height:48px!important;margin:0!important;padding:7px!important}
+ #modify-schedule .empty-slot{height:40px!important;min-height:40px!important}
+ #modify-schedule .schedule-form{grid-template-columns:1fr!important}
+ #modify-schedule .schedule-form .wide{grid-column:auto!important}
+}
+</style>
 </head>
 <body>
 <div class="shell">
