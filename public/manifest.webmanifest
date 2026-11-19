@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "MODIFY Construction Management",
+  "short_name": "MODIFY",
+  "description": "MODIFY Construction job and site management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#090a0c",
+  "theme_color": "#090a0c",
+  "icons": [
+    {
+      "src": "/icons/modify.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
