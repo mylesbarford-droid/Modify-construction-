@@ -39,6 +39,7 @@
   };
   let syncingModules=false, syncQueue=Promise.resolve();
   const pendingModuleDeletes=[];
+  const pendingModuleUpserts=new Map();
   const originalSetItem=Storage.prototype.setItem;
   function moduleJobNumber(record){
     const direct=record["Job number"]||record.jobNumber||record.job_number;
@@ -52,7 +53,11 @@
     if(syncingModules)return;
     syncingModules=true;
     try{
-      while(pendingModuleDeletes.length){const item=pendingModuleDeletes.shift();try{await api("/api/modules/"+item.module+"/records/"+encodeURIComponent(item.id),{method:"DELETE"})}catch(e){console.warn("Shared delete skipped:",e.message)}}
+      while(pendingModuleDeletes.length){
+        const item=pendingModuleDeletes[0];
+        await api("/api/modules/"+item.module+"/records/"+encodeURIComponent(item.id),{method:"DELETE"});
+        pendingModuleDeletes.shift();
+      }
       const jobs=await api("/api/jobs");sharedJobs=jobs.jobs||[];
       const raw=localStorage.getItem("modifyRecordsV2");
       const state=raw?JSON.parse(raw):{};
@@ -98,7 +103,6 @@
     finally{syncingModules=false}
   }
   Storage.prototype.setItem=function(key,value){
-    let changedRecords=[];
     if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
       try{
         const before=JSON.parse(this.getItem(key)||"{}"),after=JSON.parse(value||"{}");
@@ -110,7 +114,10 @@
           newRows.forEach(row=>{
             if(!row?.id)return;
             const previous=oldById.get(String(row.id));
-            if(previous&&JSON.stringify(previous)!==JSON.stringify(row))changedRecords.push({module,id:String(row.id),record:row,jobNumber:moduleJobNumber(row)});
+            if(previous&&JSON.stringify(previous)!==JSON.stringify(row)){
+              const item={module,id:String(row.id),record:row,jobNumber:moduleJobNumber(row)};
+              pendingModuleUpserts.set(module+":"+item.id,item);
+            }
           });
         }
       }catch(e){console.warn("Could not compare register changes",e)}
@@ -118,12 +125,12 @@
     originalSetItem.call(this,key,value);
     if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
       syncQueue=syncQueue.then(async()=>{
-        for(const item of changedRecords){
-          try{await api("/api/modules/"+item.module+"/records",{method:"POST",body:JSON.stringify({id:item.id,jobNumber:item.jobNumber,record:item.record})})}
-          catch(e){console.warn("Shared register update failed:",item.module,item.id,e.message)}
+        for(const [key,item] of pendingModuleUpserts){
+          await api("/api/modules/"+item.module+"/records",{method:"POST",body:JSON.stringify({id:item.id,jobNumber:item.jobNumber,record:item.record})});
+          if(pendingModuleUpserts.get(key)===item)pendingModuleUpserts.delete(key);
         }
         await syncOperationalRegisters();
-      }).catch(e=>console.warn("Register sync failed",e));
+      }).catch(e=>console.warn("Register sync failed; unsent changes retained for retry:",e.message));
     }
   };
   let sharedJobs=[];
