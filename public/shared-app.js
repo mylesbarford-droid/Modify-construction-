@@ -251,7 +251,7 @@
   document.head.appendChild(dashboardCalendarStyle);
   async function renderWorkforceSchedule(anchor=new Date()){
     const body=$("#pagebody");if(!body)return;
-    $("#title").textContent="Workforce Schedule";$("#subtitle").textContent="Live workforce allocation · Shared across the company · Edit assignments by day and job";$("#crumb").textContent="Workforce Schedule";$("#add").style.display="none";
+    $("#title").textContent="Workforce Job Calendar";$("#subtitle").textContent="Live workforce allocation · Shared across the company · Edit assignments by day and job";$("#crumb").textContent="Workforce Job Calendar";$("#add").style.display="none";
     const monday=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate());monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
     const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(d.getDate()+i);return d});
     body.innerHTML='<div id="modify-schedule"><div class="api-card"><div class="schedule-toolbar"><div><h2>Weekly workforce calendar</h2><p>Workers are listed down the left; each day shows their assigned job number and project. Select any day to add or change an assignment.</p><p id="schedule-range"></p></div><div><button id="schedule-prev" type="button">← Previous</button> <button id="schedule-today" type="button">This week</button> <button id="schedule-next" type="button">Next →</button></div></div><div id="schedule-message" role="status"></div><div class="schedule-scroll" id="schedule-grid">Loading schedule…</div><div id="schedule-editor" class="api-item" hidden></div></div></div>';
