@@ -180,12 +180,12 @@
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   const dateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
   const dateLabel=d=>d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
-  let dashboardWeekOffset=0,dashboardCalendarLoading=false;
+  let dashboardWeekOffset=0;
   const dashboardDateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
   async function renderDashboardCalendar(){
     const target=$("#dashboard-weekly-calendar");
-    if(!target||dashboardCalendarLoading||!currentUser)return;
-    dashboardCalendarLoading=true;
+    if(!target||target.dataset.loading==="1"||target.dataset.loaded==="1"||!currentUser)return;
+    target.dataset.loading="1";
     target.textContent="Loading weekly workforce calendar…";
     const monday=new Date();monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7)+dashboardWeekOffset*7);
     const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(d.getDate()+i);return d});
@@ -211,21 +211,25 @@
         return '<tr><th class="dc-worker">'+esc(w.name)+(w.role?'<small>'+esc(w.role)+'</small>':"")+'</th>'+cells+'</tr>';
       }).join("");
       const range=label(days[0])+" – "+label(days[6]);
+      if(!target.isConnected)return;
       target.innerHTML='<div class="dc-toolbar"><strong>'+range+'</strong><div><button type="button" id="dc-prev" aria-label="Previous week">←</button> <button type="button" id="dc-today">This week</button> <button type="button" id="dc-next" aria-label="Next week">→</button></div></div><div class="dc-scroll"><table class="dc-table">'+head+'<tbody>'+(rows||'<tr><td colspan="8">No active workers found. Add your team in Workforce to show the calendar.</td></tr>')+'</tbody></table></div><p class="dc-note">Live shared assignments · Select “Open full calendar” to add or edit jobs.</p>';
-      $("#dc-prev").onclick=()=>{dashboardWeekOffset--;renderDashboardCalendar()};
-      $("#dc-next").onclick=()=>{dashboardWeekOffset++;renderDashboardCalendar()};
-      $("#dc-today").onclick=()=>{dashboardWeekOffset=0;renderDashboardCalendar()};
+      target.dataset.loaded="1";
+      $("#dc-prev").onclick=()=>{dashboardWeekOffset--;renderDashboardCalendar(true)};
+      $("#dc-next").onclick=()=>{dashboardWeekOffset++;renderDashboardCalendar(true)};
+      $("#dc-today").onclick=()=>{dashboardWeekOffset=0;renderDashboardCalendar(true)};
     }catch(e){
-      target.textContent="The weekly calendar could not load: "+e.message;
-    }finally{dashboardCalendarLoading=false}
+      if(target.isConnected)target.textContent="The weekly calendar could not load: "+e.message;
+    }finally{
+      delete target.dataset.loading;
+      const liveTarget=$("#dashboard-weekly-calendar");
+      if(liveTarget&&liveTarget!==target&&!liveTarget.dataset.loaded)renderDashboardCalendar();
+    }
   }
   const dashboardBody=$("#pagebody");
   if(dashboardBody)new MutationObserver(()=>{
-    if($("#dashboard-weekly-calendar")&&!$("#dashboard-weekly-calendar").dataset.ready){
-      $("#dashboard-weekly-calendar").dataset.ready="1";
-      renderDashboardCalendar();
-    }
-  }).observe(dashboardBody,{childList:true});
+    const target=$("#dashboard-weekly-calendar");
+    if(target&&!target.dataset.loading&&!target.dataset.loaded)renderDashboardCalendar();
+  }).observe(dashboardBody,{childList:true,subtree:true});
   const dashboardCalendarStyle=document.createElement("style");
   dashboardCalendarStyle.textContent=`
     #dashboard-calendar-card .dc-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 12px;color:#e0c477}
