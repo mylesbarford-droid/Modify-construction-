@@ -182,9 +182,10 @@
   const dateLabel=d=>d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
   let dashboardWeekOffset=0;
   const dashboardDateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
-  async function renderDashboardCalendar(){
+  async function renderDashboardCalendar(force=false){
     const target=$("#dashboard-weekly-calendar");
-    if(!target||target.dataset.loading==="1"||target.dataset.loaded==="1"||!currentUser)return;
+    if(!target||target.dataset.loading==="1"||(!force&&target.dataset.loaded==="1")||!currentUser)return;
+    if(force)delete target.dataset.loaded;
     target.dataset.loading="1";
     target.textContent="Loading weekly workforce calendar…";
     const monday=new Date();monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7)+dashboardWeekOffset*7);
