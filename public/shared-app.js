@@ -27,10 +27,10 @@
   @media(max-width:600px){#modify-staff-panel .staffgrid,#modify-job-api .api-grid{grid-template-columns:1fr}#modify-job-api .api-wide{grid-column:auto}#modify-staff-panel{inset:3% 3%}}
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
-  const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<form class="authbox" id="modify-login-form"><h1>MODIFY Construction</h1><p>Type the shared access word to enter</p><label>Access word</label><input name="password" type="password" autocomplete="current-password" required autofocus><div id="modify-auth-error" role="alert"></div><button type="submit">Enter MODIFY</button></form>';
+  const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><h1>MODIFY Construction</h1><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
   document.body.appendChild(cover);
   const api=async(path,opts={})=>{const r=await fetch(path,{credentials:"same-origin",...opts,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data};
-  function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>Shared company access</span><button id="modify-logout" type="button">Sign out</button>';$("#modify-logout")?.addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"})}catch{}location.reload()})}
+  function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>Open company access · no password</span>'}
   const moduleMap={
     "Money":"money","Plant & Equipment":"plant","Vehicles":"vehicles","Workforce":"workforce",
     "Health & Safety":"safety",
@@ -113,8 +113,7 @@
     }
   };
   let sharedJobs=[];
-  async function boot(){try{const d=await api("/api/auth/me");currentUser=d.user;if(!currentUser)throw new Error("Please sign in");cover.remove();accountBar();await syncOperationalRegisters()}catch{cover.style.display="grid"}}
-  $("#modify-login-form").addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const error=$("#modify-auth-error");error.textContent="Opening MODIFY…";try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({password:f.get("password")})});currentUser=d.user;cover.remove();accountBar();location.reload()}catch(err){error.textContent=err.message}});
+  async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(!d?.user)d=await api("/api/auth/login",{method:"POST",body:"{}"});currentUser=d.user;if(!currentUser)throw new Error("Could not open company workspace");cover.remove();accountBar();await syncOperationalRegisters()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
   async function renderJobUpdates(jobFilter=null){
