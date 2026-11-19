@@ -61,6 +61,32 @@
       const jobs=await api("/api/jobs");sharedJobs=jobs.jobs||[];
       const raw=localStorage.getItem("modifyRecordsV2");
       const state=raw?JSON.parse(raw):{};
+      // Automatically migrate legacy Jobs & Sites saved in this browser into the
+      // shared jobs table. The previous flow only offered a manual import button
+      // on the Jobs page, leaving Job Updates with an empty shared dropdown.
+      const legacyJobs=Array.isArray(state["Jobs & Sites"])?state["Jobs & Sites"]:[];
+      const sharedJobNumbers=new Set(sharedJobs.map(j=>String(j.job_number||"").trim()));
+      let importedLegacyJobs=false;
+      for(const legacy of legacyJobs){
+        const jobNumber=String(legacy["Job number"]||"").trim();
+        const projectName=String(legacy["Job / project name"]||"").trim();
+        if(!jobNumber||!projectName||sharedJobNumbers.has(jobNumber))continue;
+        try{
+          await api("/api/jobs",{method:"POST",body:JSON.stringify({
+            jobNumber,projectName,client:String(legacy.Client||""),
+            siteAddress:String(legacy["Site address"]||""),
+            jobType:String(legacy["Job type"]||""),
+            startDate:String(legacy["Start date"]||""),
+            expectedFinishDate:String(legacy["Expected finish date"]||""),
+            projectManager:String(legacy["Project manager"]||""),
+            status:String(legacy.Status||"Enquiry"),notes:String(legacy.Notes||"")
+          })});
+          sharedJobNumbers.add(jobNumber);importedLegacyJobs=true;
+        }catch(e){
+          if(!/already exists/i.test(e.message))console.warn("Legacy job migration deferred:",jobNumber,e.message);
+        }
+      }
+      if(importedLegacyJobs){const refreshed=await api("/api/jobs");sharedJobs=refreshed.jobs||[];}
       const permitted={
         administrator:Object.keys(moduleMap),
         office_manager:["Money","Documents","Suppliers & Materials","Job Materials","Workforce"],
