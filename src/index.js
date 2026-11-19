@@ -58,9 +58,9 @@ async function getSession(request, env) {
 }
 const PERMISSIONS = {
   administrator: ["*"],
-  office_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "money:read", "money:write", "documents:read", "documents:write", "suppliers:read", "suppliers:write", "workforce:read", "workforce:write", "users:read"],
-  site_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "workforce:read", "workforce:write", "plant:read", "plant:write", "vehicles:read", "vehicles:write", "safety:read", "safety:write", "documents:read"],
-  employee: ["job_updates:read", "job_updates:create", "dashboard:read", "jobs:assigned:read", "timesheets:read", "timesheets:write", "daily_reports:read", "daily_reports:write"]
+  office_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "money:read", "money:write", "documents:read", "documents:write", "suppliers:read", "suppliers:write", "workforce:read", "workforce:write", "schedule:read", "schedule:write", "users:read"],
+  site_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "workforce:read", "workforce:write", "schedule:read", "schedule:write", "plant:read", "plant:write", "vehicles:read", "vehicles:write", "safety:read", "safety:write", "documents:read"],
+  employee: ["job_updates:read", "job_updates:create", "dashboard:read", "jobs:assigned:read", "schedule:read", "timesheets:read", "timesheets:write", "daily_reports:read", "daily_reports:write"]
 };
 function can(role, permission) {
   const grants = PERMISSIONS[role] || [];
@@ -292,7 +292,7 @@ async function handleApi(request, env) {
     const moduleName = moduleRoute[1];
     const recordId = moduleRoute[2] ? decodeURIComponent(moduleRoute[2]) : null;
     const modulePermissions = {
-      money: "money", plant: "plant", vehicles: "vehicles", workforce: "workforce",
+      money: "money", plant: "plant", vehicles: "vehicles", workforce: "workforce", schedule: "schedule",
       safety: "safety", documents: "documents", suppliers: "suppliers",
       materials: "suppliers", tooling: "plant", timesheets: "timesheets", daily_reports: "daily_reports"
     };
