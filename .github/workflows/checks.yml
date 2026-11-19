@@ -14,3 +14,5 @@ jobs:
           node-version: 22
       - run: npm run check
       - run: npm test
+      - name: Validate Cloudflare Worker deployment configuration
+        run: npx --yes wrangler@4.165.0 deploy --dry-run
