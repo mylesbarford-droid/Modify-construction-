@@ -238,6 +238,8 @@
       const chosen=String(existing.workerId||workerId||"");
       editor.hidden=false;
       editor.innerHTML='<h3>'+(existing.id?'Edit job allocation':'Assign a job')+'</h3><div class="schedule-form"><label>Worker<select id="sch-worker">'+workers.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===chosen?'selected':'')+'>'+esc(w.name)+'</option>').join("")+'</select></label><label>Job / project<select id="sch-job"><option value="">Choose a job</option>'+jobs.map(j=>'<option value="'+esc(j.job_number)+'" '+(String(j.job_number)===String(existing.jobNumber||"")?'selected':'')+'>'+esc(j.job_number+" — "+j.project_name)+'</option>').join("")+'</select></label><label>Date<input id="sch-date" type="date" value="'+esc(existing.date||date)+'" required></label><label>Start time<input id="sch-start" type="time" value="'+esc(existing.startTime||"")+'"></label><label>Finish time<input id="sch-end" type="time" value="'+esc(existing.endTime||"")+'"></label><label class="wide">Notes<textarea id="sch-notes" rows="2">'+esc(existing.notes||"")+'</textarea></label></div><div class="api-actions"><button type="button" id="sch-cancel">Cancel</button>'+(existing.id?'<button type="button" id="sch-delete">Delete allocation</button>':"")+'<button type="button" id="sch-save">Save allocation</button></div>';
+      editor.scrollIntoView({behavior:"smooth",block:"start"});
+      $("#sch-job").focus({preventScroll:true});
       $("#sch-cancel").onclick=()=>editor.hidden=true;
       $("#sch-save").onclick=async()=>{
         const worker=workers.find(w=>w.id===$("#sch-worker").value),job=jobs.find(j=>String(j.job_number)===$("#sch-job").value),dateValue=$("#sch-date").value,startTime=$("#sch-start").value,endTime=$("#sch-end").value;
