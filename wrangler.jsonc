@@ -8,10 +8,7 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
-  "r2_buckets": [
-    { "binding": "FILES", "bucket_name": "modify-construction-files" }
-  ],
-  "d1_databases": [
+"d1_databases": [
     {
       "binding": "DB",
       "database_name": "modify-construction-db",
