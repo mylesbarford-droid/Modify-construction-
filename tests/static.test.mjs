@@ -100,9 +100,9 @@ test("documents upload to shared D1 storage and can be retrieved across devices"
   assert.match(worker, /INSERT OR REPLACE INTO shared_files/);
   assert.match(worker, /SELECT file_name,content_type,data_base64 FROM shared_files/);
   assert.match(html, /async function uploadSharedDocument/);
-  assert.match(html, /uploadSharedDocument\\(file,id\\)/);
+  assert.ok(html.includes("uploadSharedDocument(file,id)"));
   assert.match(html, /X-File-Id/);
-  assert.doesNotMatch(html, /else\\{out\\.push\\(await saveLocalFile\\(file,id\\)\\)\\}/);
+  assert.equal(html.includes("else{out.push(await saveLocalFile(file,id))}"), false);
 });
 test("shared workforce and job photos use existing D1 storage without paid R2 bindings", () => {
   assert.match(worker, /INSERT OR REPLACE INTO shared_files/);
