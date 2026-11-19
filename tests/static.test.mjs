@@ -29,8 +29,9 @@ test("job update endpoints enforce role checks and review state", () => {
   assert.match(worker, /review_status='pending'/);
 });
 
-test("dashboard includes sign-in, shared updates and first-admin setup", () => {
-  assert.match(app, /modify-login-form/);
+test("dashboard opens automatically, shared updates and first-admin setup remain available", () => {
+  assert.match(app, /api\/auth\/login/);
+  assert.doesNotMatch(app, /modify-login-form/);
   assert.match(app, /\/api\/job-updates/);
   assert.match(app, /Staff & assignments/);
   assert.match(setup, /\/api\/setup\/first-admin/);
@@ -81,11 +82,12 @@ test("MODIFY is installable as a PWA without caching private company data", () =
   assert.match(serviceWorker, /MODIFY is offline/);
 });
 
-test("shared Modify access uses one word and no individual login fields", () => {
-  assert.match(worker, /safeEqual\(input\.password, "Modify"\)/);
+test("open company access creates an administrator session without a password", () => {
+  assert.match(worker, /Owner-requested open access/);
   assert.match(worker, /MODIFY_SHARED/);
-  assert.match(app, /name="password"/);
-  assert.match(app, /password:f\.get\("password"\)/);
+  assert.match(app, /api\/auth\/login/);
+  assert.doesNotMatch(app, /name="password"/);
+  assert.doesNotMatch(app, /password:f\.get\("password"\)/);
   assert.doesNotMatch(app, /name="staffCode"/);
   assert.doesNotMatch(app, /name="pin"/);
   assert.doesNotMatch(app, /modify-staff-open/);
