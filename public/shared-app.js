@@ -210,7 +210,7 @@
     const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(d.getDate()+i);return d});
     $("#title").textContent="Workforce Job Calendar";$("#subtitle").textContent="Weekly job allocations for the whole team";$("#crumb").textContent="Workforce Job Calendar";
     const add=$("#add");if(add)add.style.display="none";
-    body.innerHTML='<div id="modify-schedule"><div class="schedule-card"><div class="schedule-toolbar"><div><h2>Workforce Job Calendar</h2><p>Monday to Sunday · Select a blank day to assign a job, or select an existing job to edit it.</p><p id="schedule-range"></p></div><div class="schedule-actions"><button id="schedule-prev" type="button">← Previous</button><button id="schedule-today" class="primary" type="button">This week</button><button id="schedule-next" type="button">Next →</button></div></div><div id="schedule-message" role="status" aria-live="polite"></div><div class="schedule-scroll" id="schedule-grid">Loading calendar…</div><div id="schedule-editor" class="api-item" hidden></div></div></div>';
+    body.innerHTML='<div id="modify-schedule"><div class="schedule-card"><div class="schedule-toolbar"><div><h2>Workforce Job Calendar</h2><p>Monday to Sunday · Select a blank day to assign a job, or select an existing job to edit it.</p><p id="schedule-range"></p></div><div class="schedule-actions"><button id="schedule-prev" type="button">← Previous</button><button id="schedule-today" class="primary" type="button">This week</button><button id="schedule-next" type="button">Next →</button><button id="schedule-assign" class="primary" type="button">Assign Job</button></div></div><div id="schedule-message" role="status" aria-live="polite"></div><div class="schedule-scroll" id="schedule-grid">Loading calendar…</div><div id="schedule-editor" class="api-item" hidden></div></div></div>';
     $("#schedule-range").textContent=dateLabel(days[0])+" – "+dateLabel(days[6]);
     $("#schedule-prev").onclick=()=>{const d=new Date(monday);d.setDate(d.getDate()-7);renderWorkforceSchedule(d)};
     $("#schedule-next").onclick=()=>{const d=new Date(monday);d.setDate(d.getDate()+7);renderWorkforceSchedule(d)};
@@ -253,6 +253,7 @@
         catch(e){message.textContent="Could not delete allocation: "+e.message}
       };
     }
+    $("#schedule-assign").onclick=()=>openEditor({},workers[0]?.id||"",dateKey(new Date()));
     grid.querySelectorAll("[data-new-shift]").forEach(b=>b.onclick=()=>openEditor({},b.dataset.newShift,b.dataset.date));
     grid.querySelectorAll("[data-edit-shift]").forEach(b=>b.onclick=()=>{const a=assignments.find(x=>x.id===b.dataset.editShift);if(a)openEditor(a)});
   }
