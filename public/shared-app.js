@@ -34,7 +34,7 @@
   #modify-schedule .day-col{min-width:112px}
   #modify-schedule .shift{display:block;background:#29251c;border:1px solid #80652d;border-radius:8px;padding:7px;margin:4px 0;font-size:12px;cursor:pointer;color:#f4f1e8}
   #modify-schedule .shift strong{display:block;color:#e0c477}
-  #modify-schedule .empty-slot{width:100%;min-height:44px;background:transparent;border:1px dashed #514a39;color:#aaa;border-radius:7px}
+  #modify-schedule .empty-slot{display:block;width:100%;min-height:44px;background:transparent;border:0;color:transparent;border-radius:7px;cursor:pointer}#modify-schedule .empty-slot:hover,#modify-schedule .empty-slot:focus-visible{background:#29251c;outline:1px solid #80652d}
   #modify-schedule .schedule-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
   #modify-schedule label{display:grid;gap:5px;color:#e0c477;font-size:12px}
   #modify-schedule input,#modify-schedule select,#modify-schedule textarea{width:100%;padding:10px;border:1px solid #48443a;border-radius:8px;background:#111317;color:#f4f1e8}
@@ -249,7 +249,9 @@
     #dashboard-calendar-card .dc-empty{color:#777;display:block;text-align:center;padding:9px}
   `;
   document.head.appendChild(dashboardCalendarStyle);
+  let workforceScheduleRenderId=0;
   async function renderWorkforceSchedule(anchor=new Date()){
+    const renderId=++workforceScheduleRenderId;
     const body=$("#pagebody");if(!body)return;
     $("#title").textContent="Workforce Job Calendar";$("#subtitle").textContent="Live workforce allocation · Shared across the company · Edit assignments by day and job";$("#crumb").textContent="Workforce Job Calendar";$("#add").style.display="none";
     const monday=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate());monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
@@ -263,12 +265,13 @@
     let workers=[],jobs=[],assignments=[];
     try{
       const jobData=await api("/api/jobs");jobs=jobData.jobs||[];
-      if(canEdit){const w=await api("/api/modules/workforce/records");workers=(w.records||[]).map(x=>({id:x.id,name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(x.status));}
+      if(canEdit){const w=await api("/api/modules/workforce/records");workers=(w.records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(x.status));}
       else workers=[{id:currentUser.id,name:currentUser.name,role:"",status:"Employed"}];
-      const data=await api("/api/modules/schedule/records");assignments=(data.records||[]).map(x=>({...x.record,id:x.id,jobNumber:x.jobNumber||x.record.jobNumber||""}));
-    }catch(e){$("#schedule-grid").textContent=e.message;return}
+      const data=await api("/api/modules/schedule/records");assignments=(data.records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||"")}));
+      if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
+    }catch(e){if(renderId===workforceScheduleRenderId&&$("#schedule-grid"))$("#schedule-grid").textContent=e.message;return}
     const header='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
-    const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{const key=dateKey(d),items=assignments.filter(a=>(a.workerId===w.id||(currentUser.role==="employee"&&a.workerName===w.name))&&a.date===key);return '<td>'+(items.length?items.map(a=>'<button type="button" class="shift" data-edit-shift="'+esc(a.id)+'"><strong>'+esc(a.jobNumber)+'</strong>'+esc(a.jobName||"Job")+(a.startTime?' · '+esc(a.startTime):"")+'</button>').join(""):(canEdit?'<button type="button" class="empty-slot" data-new-shift="'+esc(w.id)+'" data-date="'+key+'">—</button>':'—'))+'</td>'}).join("")+'</tr>').join("");
+    const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{const key=dateKey(d),items=assignments.filter(a=>(a.workerId===w.id||(currentUser.role==="employee"&&a.workerName===w.name))&&a.date===key);return '<td>'+(items.length?items.map(a=>'<button type="button" class="shift" data-edit-shift="'+esc(a.id)+'"><strong>'+esc(a.jobNumber)+'</strong>'+esc(a.jobName||"Job")+(a.startTime?' · '+esc(a.startTime):"")+'</button>').join(""):(canEdit?'<button type="button" class="empty-slot" aria-label="Assign a job to '+esc(w.name)+' on '+esc(dateLabel(d))+'" data-new-shift="'+esc(w.id)+'" data-date="'+key+'"></button>':'—'))+'</td>'}).join("")+'</tr>').join("");
     $("#schedule-grid").innerHTML='<table>'+header+'<tbody>'+(rows||'<tr><td colspan="8">No active workers found in the Workforce register.</td></tr>')+'</tbody></table>';
     const editor=$("#schedule-editor");
     const openEditor=(existing={},workerId="",date=dateKey(new Date()))=>{
@@ -280,8 +283,10 @@
       $("#sch-save").onclick=async()=>{
         const wid=$("#sch-worker").value,worker=workers.find(x=>x.id===wid),job=jobs.find(x=>x.job_number===$("#sch-job").value);
         if(!worker||!job||!$("#sch-date").value){$("#schedule-message").textContent="Choose a worker, job number and date.";return}
-        const record={workerId:worker.id,workerName:worker.name,workerRole:worker.role,jobNumber:job.job_number,jobName:job.project_name,date:$("#sch-date").value,startTime:$("#sch-start").value,endTime:$("#sch-end").value,notes:$("#sch-notes").value};
-        try{await api("/api/modules/schedule/records",{method:"POST",body:JSON.stringify({id:existing.id||crypto.randomUUID(),jobNumber:job.job_number,record})});$("#schedule-message").textContent="Assignment saved to the shared workforce calendar.";await renderWorkforceSchedule(monday)}catch(e){$("#schedule-message").textContent=e.message}
+        const start=$("#sch-start").value,end=$("#sch-end").value;
+        if(start&&end&&end<=start){$("#schedule-message").textContent="Finish time must be later than start time.";return}
+        const record={workerId:worker.id,workerName:worker.name,workerRole:worker.role,jobNumber:job.job_number,jobName:job.project_name,date:$("#sch-date").value,startTime:start,endTime:end,notes:$("#sch-notes").value};
+        try{await api("/api/modules/schedule/records",{method:"POST",body:JSON.stringify({id:existing.id||crypto.randomUUID(),jobNumber:job.job_number,record})});await renderWorkforceSchedule(new Date(record.date+"T12:00:00"));}catch(e){$("#schedule-message").textContent=e.message}
       };
       if(existing.id)$("#sch-delete").onclick=async()=>{if(!confirm("Delete this worker assignment?"))return;try{await api("/api/modules/schedule/records/"+encodeURIComponent(existing.id),{method:"DELETE"});editor.hidden=true;await renderWorkforceSchedule(monday)}catch(e){$("#schedule-message").textContent=e.message}};
     };
