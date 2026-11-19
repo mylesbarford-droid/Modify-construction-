@@ -127,4 +127,7 @@ test("shared workforce and job photos use existing D1 storage without paid R2 bi
   assert.doesNotMatch(worker, /env\\.(?:FILES|JOB_PHOTOS)/);
   assert.match(html, /uploadSharedPhoto/);
   assert.match(html, /window\.saveModifyFiles=saveFiles/);
+  assert.match(html, /workerPhotoUrl/);
+  assert.match(html, /Team member photo/);
+  assert.match(html, /data:image/);
 });
