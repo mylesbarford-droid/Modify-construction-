@@ -121,35 +121,31 @@ async function handleApi(request, env) {
   }
   const session = await getSession(request, env);
   if (!session) return json({ error: "Please sign in again." }, 401, { "set-cookie": clearCookie("modify_session") });
-  // Shared company attachments and workforce photographs are stored in R2.
+  // Shared workforce images are stored in the existing D1 database.
   if (request.method === "POST" && url.pathname === "/api/files") {
-    if (!env.FILES) return json({ error: "Shared file storage is not configured." }, 503);
-    const length = Number(request.headers.get("Content-Length") || 0);
-    if (length > 20 * 1024 * 1024) return json({ error: "Files must be 20 MB or smaller." }, 413);
-    const data = await request.arrayBuffer();
-    if (!data.byteLength || data.byteLength > 20 * 1024 * 1024) return json({ error: "File must be between 1 byte and 20 MB." }, 413);
-    const idHeader = request.headers.get("X-File-Id") || randomToken(16);
-    const id = /^[a-f0-9]{32}$/.test(idHeader) ? idHeader : randomToken(16);
-    const rawName = request.headers.get("X-File-Name") || "attachment";
-    let name = rawName;
-    try { name = decodeURIComponent(rawName); } catch {}
-    name = name.replace(/[\\/\\r\\n\\0]/g, "_").slice(0, 180) || "attachment";
-    const type = (request.headers.get("Content-Type") || "application/octet-stream").split(";")[0].trim().toLowerCase();
-    const key = "shared-files/" + id;
-    await env.FILES.put(key, data, { httpMetadata: { contentType: type }, customMetadata: { fileName: name } });
-    await audit(env, session, "shared_file_uploaded", id + ":" + name);
-    return json({ id, name, type, size: data.byteLength }, 201);
+    const input = await body(request);
+    if (!input || typeof input.id !== "string" || !/^[a-f0-9]{32}$/.test(input.id) || typeof input.data !== "string") return json({ error: "Invalid photo upload." }, 400);
+    const match = input.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+    if (!match || match[2].length > 480000) return json({ error: "Use a JPG, PNG or WebP image up to 350 KB." }, 413);
+    const name = String(input.name || "profile-photo.jpg").replace(/[\\/\r\n\0"]/g, "_").slice(0, 180) || "profile-photo.jpg";
+    const size = Math.floor(match[2].length * 3 / 4);
+    if (!size || size > 350000) return json({ error: "Photo must be 350 KB or smaller." }, 413);
+    await env.DB.prepare("INSERT OR REPLACE INTO shared_files (id,file_name,content_type,data_base64,size_bytes,created_at) VALUES (?,?,?,?,?,?)")
+      .bind(input.id,name,match[1],match[2],size,new Date().toISOString()).run();
+    await audit(env, session, "shared_file_uploaded", input.id + ":" + name);
+    return json({ id: input.id, name, type: match[1], size }, 201);
   }
   const sharedFile = url.pathname.match(/^\/api\/files\/([a-f0-9]{32})$/);
   if (sharedFile && request.method === "GET") {
-    if (!env.FILES) return json({ error: "Shared file storage is not configured." }, 503);
-    const object = await env.FILES.get("shared-files/" + sharedFile[1]);
-    if (!object) return json({ error: "File not found." }, 404);
-    const name = object.customMetadata?.fileName || "attachment";
-    return new Response(object.body, { headers: {
-      "content-type": object.httpMetadata?.contentType || "application/octet-stream",
-      "content-disposition": 'inline; filename="' + name.replace(/["\\\\]/g, "_") + '"',
-      "x-file-name": encodeURIComponent(name),
+    const file = await env.DB.prepare("SELECT file_name,content_type,data_base64 FROM shared_files WHERE id=?").bind(sharedFile[1]).first();
+    if (!file) return json({ error: "File not found." }, 404);
+    const binary = atob(file.data_base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    return new Response(bytes, { headers: {
+      "content-type": file.content_type,
+      "content-disposition": 'inline; filename="' + file.file_name.replace(/["\\]/g, "_") + '"',
+      "x-file-name": encodeURIComponent(file.file_name),
       "cache-control": "private, no-store",
       "x-content-type-options": "nosniff"
     }});
@@ -383,7 +379,6 @@ async function handleApi(request, env) {
   const photoMatch = url.pathname.match(/^\/api\/job-updates\/([a-f0-9]+)\/photos$/);
   if (photoMatch && request.method === "POST") {
     if (!can(session.role, "job_updates:create")) return json({ error: "Not authorised." }, 403);
-    if (!env.JOB_PHOTOS) return json({ error: "Private photo storage is not configured." }, 503);
     const update = await env.DB.prepare("SELECT id, job_number, created_by FROM job_updates WHERE id=?").bind(photoMatch[1]).first();
     if (!update) return json({ error: "Job update not found." }, 404);
     if (session.role === "employee" && update.created_by !== session.user_id) return json({ error: "You can only attach photos to your own updates." }, 403);
@@ -393,8 +388,11 @@ async function handleApi(request, env) {
     if (length > 8*1024*1024) return json({ error: "Each photo must be 8 MB or smaller." }, 413);
     const data = await request.arrayBuffer();
     if (!data.byteLength || data.byteLength > 8*1024*1024) return json({ error: "Each photo must be between 1 byte and 8 MB." }, 413);
-    const id = randomToken(16), key = "job-updates/"+update.id+"/"+id;
-    await env.JOB_PHOTOS.put(key,data,{httpMetadata:{contentType:type.split(";")[0].trim().toLowerCase()}});
+    const id = randomToken(16), key = id;
+    const binary = Array.from(new Uint8Array(data), b => String.fromCharCode(b)).join("");
+    const encoded = btoa(binary);
+    await env.DB.prepare("INSERT INTO shared_files (id,file_name,content_type,data_base64,size_bytes,created_at) VALUES (?,?,?,?,?,?)")
+      .bind(id,"site-photo",type.split(";")[0].trim().toLowerCase(),encoded,data.byteLength,new Date().toISOString()).run();
     const name = (request.headers.get("X-File-Name") || "site-photo").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,120);
     await env.DB.prepare("INSERT INTO job_update_photos (id,update_id,object_key,file_name,content_type,size_bytes,uploaded_by,created_at) VALUES (?,?,?,?,?,?,?,?)")
       .bind(id,update.id,key,name,type.split(";")[0].trim().toLowerCase(),data.byteLength,session.user_id,Math.floor(Date.now()/1000)).run();
@@ -404,16 +402,17 @@ async function handleApi(request, env) {
   const getPhoto = url.pathname.match(/^\/api\/job-updates\/([a-f0-9]+)\/photos\/([a-f0-9]+)$/);
   if (getPhoto && request.method === "GET") {
     if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." },403);
-    if (!env.JOB_PHOTOS) return json({ error: "Private photo storage is not configured." },503);
     const photo = await env.DB.prepare("SELECT p.object_key,p.content_type,p.file_name,j.job_number,j.created_by FROM job_update_photos p JOIN job_updates j ON j.id=p.update_id WHERE p.id=? AND p.update_id=?").bind(getPhoto[2],getPhoto[1]).first();
     if (!photo) return json({ error: "Photo not found." },404);
     if (session.role === "employee") {
       const assigned = await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id,photo.job_number).first();
       if (!assigned) return json({ error: "Not authorised." },403);
     }
-    const object = await env.JOB_PHOTOS.get(photo.object_key);
-    if (!object) return json({ error: "Photo file not found." },404);
-    return new Response(object.body,{headers:{"content-type":photo.content_type,"content-disposition":'inline; filename="'+photo.file_name+'"',"cache-control":"private, no-store","x-content-type-options":"nosniff"}});
+    const stored = await env.DB.prepare("SELECT data_base64 FROM shared_files WHERE id=?").bind(photo.object_key).first();
+    if (!stored) return json({ error: "Photo file not found." },404);
+    const binary = atob(stored.data_base64), bytes = new Uint8Array(binary.length);
+    for (let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+    return new Response(bytes,{headers:{"content-type":photo.content_type,"content-disposition":'inline; filename="'+photo.file_name+'"',"cache-control":"private, no-store","x-content-type-options":"nosniff"}});
   }
   return json({ error: "API route not found." }, 404);
 }
