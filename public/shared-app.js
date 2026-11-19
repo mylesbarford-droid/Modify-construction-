@@ -317,5 +317,16 @@
     new MutationObserver(attachJobUpdates).observe(pageBody,{childList:true,subtree:true});
     attachJobUpdates();
   }
+  // Route the dedicated Workforce Schedule navigation item to its actual weekly calendar renderer.
+  // Without this handler the generic page router falls back to the old records screen.
+  document.addEventListener("click",e=>{
+    const b=e.target.closest('#nav button[data-page="Workforce Schedule"]');
+    if(!b)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));
+    $("#sidebar")?.classList.remove("open");
+    renderWorkforceSchedule();
+  },true);
+
   boot();
 })();
