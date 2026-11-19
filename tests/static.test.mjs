@@ -93,7 +93,18 @@ test("open company access creates an administrator session without a password", 
   assert.doesNotMatch(app, /modify-staff-open/);
 });
 
-test("documents upload to shared D1 storage and can be retrieved across devices", () => {\n  assert.match(worker, /X-File-Id/);\n  assert.match(worker, /application\\/pdf/);\n  assert.match(worker, /Each document must be between 1 byte and 8 MB/);\n  assert.match(worker, /INSERT OR REPLACE INTO shared_files/);\n  assert.match(worker, /SELECT file_name,content_type,data_base64 FROM shared_files/);\n  assert.match(html, /async function uploadSharedDocument/);\n  assert.match(html, /uploadSharedDocument\\(file,id\\)/);\n  assert.match(html, /X-File-Id/);\n  assert.doesNotMatch(html, /else\\{out\\.push\\(await saveLocalFile\\(file,id\\)\\)\\}/);\n});\ntest("shared workforce and job photos use existing D1 storage without paid R2 bindings", () => {
+test("documents upload to shared D1 storage and can be retrieved across devices", () => {
+  assert.match(worker, /X-File-Id/);
+  assert.match(worker, /application\\/pdf/);
+  assert.match(worker, /Each document must be between 1 byte and 8 MB/);
+  assert.match(worker, /INSERT OR REPLACE INTO shared_files/);
+  assert.match(worker, /SELECT file_name,content_type,data_base64 FROM shared_files/);
+  assert.match(html, /async function uploadSharedDocument/);
+  assert.match(html, /uploadSharedDocument\\(file,id\\)/);
+  assert.match(html, /X-File-Id/);
+  assert.doesNotMatch(html, /else\\{out\\.push\\(await saveLocalFile\\(file,id\\)\\)\\}/);
+});
+test("shared workforce and job photos use existing D1 storage without paid R2 bindings", () => {
   assert.match(worker, /INSERT OR REPLACE INTO shared_files/);
   assert.match(worker, /SELECT file_name,content_type,data_base64 FROM shared_files/);
   assert.match(worker, /INSERT INTO shared_files/);
