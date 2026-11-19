@@ -123,17 +123,36 @@ async function handleApi(request, env) {
   if (!session) return json({ error: "Please sign in again." }, 401, { "set-cookie": clearCookie("modify_session") });
   // Shared workforce images are stored in the existing D1 database.
   if (request.method === "POST" && url.pathname === "/api/files") {
-    const input = await body(request);
-    if (!input || typeof input.id !== "string" || !/^[a-f0-9]{32}$/.test(input.id) || typeof input.data !== "string") return json({ error: "Invalid photo upload." }, 400);
-    const match = input.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
-    if (!match || match[2].length > 480000) return json({ error: "Use a JPG, PNG or WebP image up to 350 KB." }, 413);
-    const name = String(input.name || "profile-photo.jpg").replace(/[\\/\r\n\0"]/g, "_").slice(0, 180) || "profile-photo.jpg";
-    const size = Math.floor(match[2].length * 3 / 4);
-    if (!size || size > 350000) return json({ error: "Photo must be 350 KB or smaller." }, 413);
+    const contentType = (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (contentType === "application/json") {
+      const input = await body(request);
+      if (!input || typeof input.id !== "string" || !/^[a-f0-9]{32}$/.test(input.id) || typeof input.data !== "string") return json({ error: "Invalid photo upload." }, 400);
+      const match = input.data.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match || match[2].length > 480000) return json({ error: "Use a JPG, PNG or WebP image up to 350 KB." }, 413);
+      const name = String(input.name || "profile-photo.jpg").replace(/[\\/\r\n\0"]/g, "_").slice(0, 180) || "profile-photo.jpg";
+      const size = Math.floor(match[2].length * 3 / 4);
+      if (!size || size > 350000) return json({ error: "Photo must be 350 KB or smaller." }, 413);
+      await env.DB.prepare("INSERT OR REPLACE INTO shared_files (id,file_name,content_type,data_base64,size_bytes,created_at) VALUES (?,?,?,?,?,?)")
+        .bind(input.id,name,match[1],match[2],size,new Date().toISOString()).run();
+      await audit(env, session, "shared_file_uploaded", input.id + ":" + name);
+      return json({ id: input.id, name, type: match[1], size }, 201);
+    }
+    const id = request.headers.get("X-File-Id") || "";
+    if (!/^[a-f0-9]{32}$/.test(id)) return json({ error: "Invalid file ID." }, 400);
+    if (!["application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-powerpoint","application/vnd.openxmlformats-officedocument.presentationml.presentation","text/plain","text/csv","image/jpeg","image/png","image/webp"].includes(contentType)) return json({ error: "Use PDF, Word, Excel, PowerPoint, CSV, text, JPG, PNG or WebP files." }, 415);
+    const data = await request.arrayBuffer();
+    if (!data.byteLength || data.byteLength > 8 * 1024 * 1024) return json({ error: "Each document must be between 1 byte and 8 MB." }, 413);
+    const raw = new Uint8Array(data);
+    let binary = "";
+    for (let offset=0; offset<raw.length; offset+=0x8000) binary += String.fromCharCode(...raw.subarray(offset, Math.min(offset+0x8000,raw.length)));
+    const encoded = btoa(binary);
+    let name = request.headers.get("X-File-Name") || "document";
+    try { name = decodeURIComponent(name); } catch {}
+    name = String(name).replace(/[\\/\r\n\0"]/g, "_").slice(0,180) || "document";
     await env.DB.prepare("INSERT OR REPLACE INTO shared_files (id,file_name,content_type,data_base64,size_bytes,created_at) VALUES (?,?,?,?,?,?)")
-      .bind(input.id,name,match[1],match[2],size,new Date().toISOString()).run();
-    await audit(env, session, "shared_file_uploaded", input.id + ":" + name);
-    return json({ id: input.id, name, type: match[1], size }, 201);
+      .bind(id,name,contentType,encoded,data.byteLength,new Date().toISOString()).run();
+    await audit(env, session, "shared_file_uploaded", id + ":" + name);
+    return json({ id, name, type: contentType, size: data.byteLength }, 201);
   }
   const sharedFile = url.pathname.match(/^\/api\/files\/([a-f0-9]{32})$/);
   if (sharedFile && request.method === "GET") {
