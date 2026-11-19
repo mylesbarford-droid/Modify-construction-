@@ -58,3 +58,9 @@ test("operational registers have shared D1 storage and role-checked API routes",
   assert.match(app, /syncOperationalRegisters/);
   assert.match(app, /modify-shared-records-loaded/);
 });
+
+test("shared operational records take precedence over stale browser copies", () => {
+  assert.match(app, /The shared database is authoritative/);
+  assert.match(app, /if\(remoteIds\.has\(id\)\)continue/);
+  assert.doesNotMatch(app, /byId\.set\(String\(rec\.id\),rec\)/);
+});
