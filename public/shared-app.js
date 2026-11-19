@@ -24,6 +24,44 @@
   #modify-job-api .api-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
   #modify-job-api .api-item{padding:13px;border:1px solid #39352b;border-radius:10px;margin:10px 0;background:#15171b}
   #modify-job-api .api-item small{color:#b8b5ac}
+  #modify-schedule{color:var(--ink,#17202b)}
+  #modify-schedule .schedule-card{background:#fff;border:1px solid #e3e7ec;border-radius:15px;padding:20px;box-shadow:0 4px 18px rgba(20,27,38,.04)}
+  #modify-schedule .schedule-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+  #modify-schedule .schedule-toolbar h2{font-size:24px;letter-spacing:-.6px;margin:0 0 5px;color:#151a22}
+  #modify-schedule .schedule-toolbar p{font-size:13px;color:#687386;margin:3px 0}
+  #modify-schedule #schedule-range{font-weight:700;color:#17202b;margin-top:8px}
+  #modify-schedule .schedule-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #modify-schedule .schedule-actions button{border:1px solid #dce1e8;background:#fff;color:#202938;border-radius:9px;padding:10px 13px;font-weight:650;cursor:pointer}
+  #modify-schedule .schedule-actions button.primary{background:#f36b0b;border-color:#f36b0b;color:#fff}
+  #modify-schedule .schedule-actions button:hover{filter:brightness(.96)}
+  #modify-schedule .schedule-scroll{overflow:auto;border:1px solid #dce1e8;border-radius:12px;background:#fff}
+  #modify-schedule table{border-collapse:separate;border-spacing:0;width:100%;min-width:1050px;background:#fff}
+  #modify-schedule th,#modify-schedule td{border:0;border-right:1px solid #e0e4ea;border-bottom:1px solid #e0e4ea;padding:9px;vertical-align:top;text-align:left}
+  #modify-schedule thead th{height:62px;background:#25282d;color:#fff;font-size:13px;font-weight:750;text-align:center;white-space:nowrap}
+  #modify-schedule thead th:first-child{text-align:left;padding-left:16px}
+  #modify-schedule .worker-col{min-width:190px;width:190px;position:sticky;left:0;background:#fff;color:#18202b;z-index:1;font-weight:750;vertical-align:middle}
+  #modify-schedule thead .worker-col{background:#25282d;z-index:2;color:#fff}
+  #modify-schedule .worker-col small{display:block;color:#778294;font-size:11px;font-weight:500;margin-top:4px}
+  #modify-schedule .day-col{min-width:128px}
+  #modify-schedule tbody td{height:104px;background:#fff}
+  #modify-schedule tbody tr:nth-child(even) td{background:#fbfcfd}
+  #modify-schedule tbody tr:hover td{background:#fffaf6}
+  #modify-schedule .shift{display:block;width:100%;text-align:left;background:#fff0e4;border:1px solid #f8c49f;border-left:4px solid #f36b0b;border-radius:8px;padding:10px;margin:2px 0 6px;font-size:12px;cursor:pointer;color:#20242b;line-height:1.4}
+  #modify-schedule .shift:hover{background:#ffe4d1;border-color:#efaa79}
+  #modify-schedule .shift strong{display:block;color:#b84d08;font-size:13px;margin-bottom:4px}
+  #modify-schedule .empty-slot{display:block;width:100%;height:78px;background:transparent;border:1px dashed transparent;border-radius:8px;cursor:pointer}
+  #modify-schedule .empty-slot:hover,#modify-schedule .empty-slot:focus-visible{background:#fff8f3;border-color:#efb48c;outline:none}
+  #modify-schedule .schedule-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+  #modify-schedule label{display:grid;gap:5px;color:#687386;font-size:12px}
+  #modify-schedule input,#modify-schedule select,#modify-schedule textarea{width:100%;padding:10px;border:1px solid #dce1e8;border-radius:8px;background:#fff;color:#17202b}
+  #modify-schedule .wide{grid-column:1/-1}
+  #modify-schedule #schedule-editor{margin-top:18px;background:#fbfcfd;border:1px solid #e0e4ea;border-radius:11px;padding:18px}
+  #modify-schedule #schedule-editor h3{margin:0 0 10px;font-size:16px}
+  #modify-schedule #schedule-editor .api-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+  #modify-schedule #schedule-editor button{border:1px solid #dce1e8;background:#fff;color:#20242b;border-radius:8px;padding:9px 13px;cursor:pointer}
+  #modify-schedule #schedule-editor #sch-save{background:#f36b0b;border-color:#f36b0b;color:#fff}
+  #modify-schedule #schedule-message{color:#b84d08;font-size:13px;margin:8px 0}
+  @media(max-width:700px){#modify-schedule .schedule-form{grid-template-columns:1fr}#modify-schedule .wide{grid-column:auto}#modify-schedule .schedule-card{padding:12px}#modify-schedule .schedule-toolbar h2{font-size:20px}#modify-schedule .schedule-actions button{padding:9px 10px}}
   @media(max-width:600px){#modify-staff-panel .staffgrid,#modify-job-api .api-grid{grid-template-columns:1fr}#modify-job-api .api-wide{grid-column:auto}#modify-staff-panel{inset:3% 3%}}
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
@@ -162,6 +200,62 @@
   let sharedJobs=[];
   async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(!d?.user)d=await api("/api/auth/login",{method:"POST",body:"{}"});currentUser=d.user;if(!currentUser)throw new Error("Could not open company workspace");cover.remove();accountBar();await syncOperationalRegisters()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
+  let workforceScheduleRenderId=0;
+  async function renderWorkforceSchedule(anchor=new Date()){
+    const renderId=++workforceScheduleRenderId,body=$("#pagebody");
+    if(!body||!currentUser)return;
+    const canEdit=["administrator","office_manager","site_manager"].includes(currentUser.role);
+    const monday=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate());
+    monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
+    const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(d.getDate()+i);return d});
+    $("#title").textContent="Workforce Job Calendar";$("#subtitle").textContent="Weekly job allocations for the whole team";$("#crumb").textContent="Workforce Job Calendar";
+    const add=$("#add");if(add)add.style.display="none";
+    body.innerHTML='<div id="modify-schedule"><div class="schedule-card"><div class="schedule-toolbar"><div><h2>Workforce Job Calendar</h2><p>Monday to Sunday · Select a blank day to assign a job, or select an existing job to edit it.</p><p id="schedule-range"></p></div><div class="schedule-actions"><button id="schedule-prev" type="button">← Previous</button><button id="schedule-today" class="primary" type="button">This week</button><button id="schedule-next" type="button">Next →</button></div></div><div id="schedule-message" role="status" aria-live="polite"></div><div class="schedule-scroll" id="schedule-grid">Loading calendar…</div><div id="schedule-editor" class="api-item" hidden></div></div></div>';
+    $("#schedule-range").textContent=dateLabel(days[0])+" – "+dateLabel(days[6]);
+    $("#schedule-prev").onclick=()=>{const d=new Date(monday);d.setDate(d.getDate()-7);renderWorkforceSchedule(d)};
+    $("#schedule-next").onclick=()=>{const d=new Date(monday);d.setDate(d.getDate()+7);renderWorkforceSchedule(d)};
+    $("#schedule-today").onclick=()=>renderWorkforceSchedule(new Date());
+    const grid=$("#schedule-grid"),message=$("#schedule-message");
+    let workers=[],jobs=[],assignments=[];
+    try{
+      const results=await Promise.all([api("/api/jobs"),canEdit?api("/api/modules/workforce/records"):Promise.resolve({records:[]}),api("/api/modules/schedule/records")]);
+      jobs=results[0].jobs||[];
+      workers=canEdit?(results[1].records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status))):[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
+      assignments=(results[2].records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||"")}));
+      if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
+    }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected)grid.textContent="The calendar could not load: "+e.message;return}
+    const header='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
+    const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{
+      const key=dateKey(d),items=assignments.filter(a=>(a.workerId===w.id||(!canEdit&&a.workerName===w.name))&&a.date===key);
+      const html=items.length?items.map(a=>'<button type="button" class="shift" data-edit-shift="'+esc(a.id)+'"><strong>'+esc(a.jobNumber||"Job")+'</strong>'+esc(a.jobName||"Project not set")+(a.startTime?' · '+esc(a.startTime):"")+'</button>').join(""):(canEdit?'<button type="button" class="empty-slot" aria-label="Assign a job to '+esc(w.name)+' on '+esc(dateLabel(d))+'" data-new-shift="'+esc(w.id)+'" data-date="'+key+'"></button>':'—');
+      return '<td>'+html+'</td>';
+    }).join("")+'</tr>').join("");
+    grid.innerHTML='<table>'+header+'<tbody>'+(rows||'<tr><td colspan="8">No active workers found in the Workforce register.</td></tr>')+'</tbody></table>';
+    const editor=$("#schedule-editor");
+    function openEditor(existing={},workerId="",date=dateKey(new Date())){
+      if(!canEdit)return;
+      const chosen=String(existing.workerId||workerId||"");
+      editor.hidden=false;
+      editor.innerHTML='<h3>'+(existing.id?'Edit job allocation':'Assign a job')+'</h3><div class="schedule-form"><label>Worker<select id="sch-worker">'+workers.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===chosen?'selected':'')+'>'+esc(w.name)+'</option>').join("")+'</select></label><label>Job / project<select id="sch-job"><option value="">Choose a job</option>'+jobs.map(j=>'<option value="'+esc(j.job_number)+'" '+(String(j.job_number)===String(existing.jobNumber||"")?'selected':'')+'>'+esc(j.job_number+" — "+j.project_name)+'</option>').join("")+'</select></label><label>Date<input id="sch-date" type="date" value="'+esc(existing.date||date)+'" required></label><label>Start time<input id="sch-start" type="time" value="'+esc(existing.startTime||"")+'"></label><label>Finish time<input id="sch-end" type="time" value="'+esc(existing.endTime||"")+'"></label><label class="wide">Notes<textarea id="sch-notes" rows="2">'+esc(existing.notes||"")+'</textarea></label></div><div class="api-actions"><button type="button" id="sch-cancel">Cancel</button>'+(existing.id?'<button type="button" id="sch-delete">Delete allocation</button>':"")+'<button type="button" id="sch-save">Save allocation</button></div>';
+      $("#sch-cancel").onclick=()=>editor.hidden=true;
+      $("#sch-save").onclick=async()=>{
+        const worker=workers.find(w=>w.id===$("#sch-worker").value),job=jobs.find(j=>String(j.job_number)===$("#sch-job").value),dateValue=$("#sch-date").value,startTime=$("#sch-start").value,endTime=$("#sch-end").value;
+        if(!worker||!job||!dateValue){message.textContent="Please choose a worker, job and date.";return}
+        if(startTime&&endTime&&endTime<=startTime){message.textContent="Finish time must be later than start time.";return}
+        const record={workerId:worker.id,workerName:worker.name,workerRole:worker.role,jobNumber:String(job.job_number),jobName:job.project_name,date:dateValue,startTime,endTime,notes:$("#sch-notes").value};
+        const button=$("#sch-save");button.disabled=true;button.textContent="Saving…";
+        try{await api("/api/modules/schedule/records",{method:"POST",body:JSON.stringify({id:existing.id||crypto.randomUUID(),jobNumber:String(job.job_number),record})});await renderWorkforceSchedule(new Date(dateValue+"T12:00:00"))}
+        catch(e){message.textContent="Could not save allocation: "+e.message;button.disabled=false;button.textContent="Save allocation"}
+      };
+      if(existing.id)$("#sch-delete").onclick=async()=>{
+        if(!confirm("Delete this calendar allocation?"))return;
+        try{await api("/api/modules/schedule/records/"+encodeURIComponent(existing.id),{method:"DELETE"});await renderWorkforceSchedule(monday)}
+        catch(e){message.textContent="Could not delete allocation: "+e.message}
+      };
+    }
+    grid.querySelectorAll("[data-new-shift]").forEach(b=>b.onclick=()=>openEditor({},b.dataset.newShift,b.dataset.date));
+    grid.querySelectorAll("[data-edit-shift]").forEach(b=>b.onclick=()=>{const a=assignments.find(x=>x.id===b.dataset.editShift);if(a)openEditor(a)});
+  }
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
   async function renderJobUpdates(jobFilter=null){
     const body=$("#pagebody");if(!body)return;
@@ -172,6 +266,7 @@
      $("#api-submit").onclick=async()=>{const v=id=>$("#api-"+id).value;const payload={jobNumber:v("job"),jobName:sharedJobs.find(j=>String(j.job_number)===v("job"))?.project_name||"",stage:v("stage"),status:v("status"),workType:v("work"),issue:v("issue"),nextAction:v("next"),note:v("note")};if(Object.entries(payload).some(([k,x])=>["jobNumber","stage","status","workType","issue","nextAction"].includes(k)&&!x)){alert("Please complete all required selections.");return}const summary="Job: "+payload.jobNumber+"\nStage: "+payload.stage+"\nStatus: "+payload.status+"\nWork: "+payload.workType+"\nIssue: "+payload.issue+"\nNext: "+payload.nextAction+"\nNotes: "+payload.note;if(!confirm("Review this update:\n\n"+summary+"\n\nSubmit for manager review?"))return;try{const created=await api("/api/job-updates",{method:"POST",body:JSON.stringify(payload)});const photos=Array.from($("#api-photos").files||[]);let photoErrors=[];for(const file of photos){if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>8*1024*1024){photoErrors.push(file.name+": use JPG, PNG or WebP up to 8 MB");continue}try{const response=await fetch("/api/job-updates/"+created.id+"/photos",{method:"POST",credentials:"same-origin",headers:{"Content-Type":file.type,"X-File-Name":file.name},body:file});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"Photo upload failed");}catch(e){photoErrors.push(file.name+": "+e.message)}}alert("Update submitted to the shared company system."+(photoErrors.length?"\n\nPhoto upload issue:\n"+photoErrors.join("\n"):""));await renderJobUpdates(jobFilter)}catch(err){alert(err.message)}};
     try{const d=await api("/api/job-updates");$("#api-history").innerHTML=(d.updates||[]).filter(x=>!jobFilter||String(x.job_number)===String(jobFilter)).map(x=>'<div class="api-item"><strong>'+esc(x.job_name||x.job_number)+' · '+esc(x.stage)+'</strong><br><small>'+esc(x.creator_name)+' · '+new Date(x.created_at*1000).toLocaleString()+'</small><p>'+esc(x.status)+' · '+esc(x.work_type)+' · '+esc(x.issue)+'</p><p>'+esc(x.note)+'</p>'+(x.photos||[]).map(p=>'<div style="margin:12px 0"><a href="/api/job-updates/'+esc(x.id)+'/photos/'+esc(p.id)+'" class="api-photo-link" data-photo-name="'+esc(p.file_name)+'" style="display:inline-flex;flex-direction:column;gap:6px;text-decoration:underline"><img src="/api/job-updates/'+esc(x.id)+'/photos/'+esc(p.id)+'" alt="'+esc(p.file_name)+'" loading="lazy" style="display:block;width:min(220px,100%);max-height:180px;object-fit:cover;border-radius:9px;border:1px solid #76612d"><span>'+esc(p.file_name)+' · View full image</span></a></div>').join("")+'<p><b>Review:</b> '+esc(x.review_status)+(x.review_note?' · '+esc(x.review_note):"")+'</p>'+((currentUser.role==="administrator"||currentUser.role==="office_manager"||currentUser.role==="site_manager")&&x.review_status==="pending"?'<button data-review="approved" data-id="'+esc(x.id)+'">Approve</button> <button data-review="rejected" data-id="'+esc(x.id)+'">Reject</button>':"")+'</div>').join("")||'<p>No shared updates yet.</p>';$("#api-history").addEventListener("click",e=>{const link=e.target.closest(".api-photo-link");if(!link)return;e.preventDefault();const viewer=document.createElement("div");viewer.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center;padding:18px";viewer.innerHTML='<button type="button" aria-label="Close image" style="position:absolute;top:18px;right:18px;background:#c9a64b;color:#111;border:0;border-radius:9px;padding:12px 18px;font-weight:700">Close ✕</button><div style="max-width:100%;max-height:100%;display:flex;flex-direction:column;align-items:center;gap:10px"><img alt="" style="max-width:100%;max-height:82vh;object-fit:contain"><span style="color:white;overflow-wrap:anywhere"></span></div>';const img=viewer.querySelector("img"),caption=viewer.querySelector("span");caption.textContent=link.dataset.photoName||"Site photo";img.src=link.href;viewer.querySelector("button").onclick=()=>viewer.remove();viewer.addEventListener("click",ev=>{if(ev.target===viewer)viewer.remove()});document.body.appendChild(viewer)});$("#api-history").querySelectorAll("[data-review]").forEach(b=>b.onclick=async()=>{const note=prompt("Optional review note:")||"";try{await api("/api/job-updates/"+b.dataset.id+"/review",{method:"POST",body:JSON.stringify({decision:b.dataset.review,note})});await renderJobUpdates()}catch(e){alert(e.message)}})}catch(err){$("#api-history").textContent=err.message}
   }
+  document.addEventListener("click",e=>{const b=e.target.closest('[data-page="Workforce Job Calendar"]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelector("#sidebar")?.classList.remove("open");renderWorkforceSchedule()},true);
   document.addEventListener("click",e=>{const b=e.target.closest('#nav button[data-page="Job Updates"]');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));$("#sidebar")?.classList.remove("open");window.current="Job Updates";renderJobUpdates()},true);
   async function openStaffPanel(){let panel=$("#modify-staff-panel");if(panel)panel.remove();panel=document.createElement("div");panel.id="modify-staff-panel";panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h2>Staff & job assignments</h2><button id="staff-close" type="button">Close</button></div><p>Create individual staff access. PINs are never displayed again after creation.</p><div class="staffgrid"><label class="stafffield">Full name<input id="staff-name"></label><label class="stafffield">Staff code<input id="staff-code"></label><label class="stafffield">Six-digit PIN<input id="staff-pin" type="password" inputmode="numeric" maxlength="6"></label><label class="stafffield">Role<select id="staff-role"><option value="employee">Employee</option><option value="site_manager">Site manager</option><option value="office_manager">Office manager</option></select></label></div><p><button id="staff-create" type="button">Create staff account</button></p><hr><h3>Assign an employee to a job</h3><div class="staffgrid"><label class="stafffield">Employee<select id="assign-user"></select></label><label class="stafffield">Job number<input id="assign-job"></label></div><p><button id="staff-assign" type="button">Save assignment</button></p><div id="staff-list">Loading staff…</div><div id="staff-message" role="status"></div>';document.body.appendChild(panel);$("#staff-close").onclick=()=>panel.remove();if(currentUser.role!=="administrator"){$("#staff-create").disabled=true;$("#staff-create").title="Only administrator can create accounts";}if(currentUser.role!=="administrator"&&currentUser.role!=="office_manager")$("#staff-assign").style.display="none";
     const load=async()=>{try{const d=await api("/api/auth/users");$("#assign-user").innerHTML=(d.users||[]).filter(u=>u.role==="employee"&&u.active).map(u=>'<option value="'+esc(u.id)+'">'+esc(u.name)+' ('+esc(u.staffCode)+')</option>').join("");$("#staff-list").innerHTML=(d.users||[]).map(u=>'<div class="staffrow"><span><b>'+esc(u.name)+'</b><br><small>'+esc(u.staffCode)+' · '+esc(u.role)+' · '+(u.active?"Active":"Inactive")+'</small></span>'+(u.id!==currentUser.id?'<button data-toggle-user="'+esc(u.id)+'" data-active="'+(u.active?"false":"true")+'">'+(u.active?"Deactivate":"Activate")+'</button>':"")+'</div>').join("");$("#staff-list").querySelectorAll("[data-toggle-user]").forEach(b=>b.onclick=async()=>{try{await api("/api/auth/users/"+b.dataset.toggleUser,{method:"PATCH",body:JSON.stringify({active:b.dataset.active==="true"})});await load()}catch(e){alert(e.message)}})}catch(e){$("#staff-list").textContent=e.message}};
