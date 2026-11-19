@@ -66,18 +66,31 @@
         const module=moduleMap[page],local=Array.isArray(state[page])?state[page]:[];
         let remote=[];
         try{remote=(await api("/api/modules/"+module+"/records")).records||[]}catch(e){if(!/permission/i.test(e.message))console.warn("Shared register load:",page,e.message);continue}
+        // The shared database is authoritative. Import legacy browser records only
+        // when their IDs do not already exist remotely; never overwrite newer shared
+        // records with a stale copy left in one staff member's browser.
         const byId=new Map();
-        remote.forEach(x=>{const rec={...x.record,id:x.id};byId.set(String(x.id),rec)});
-        local.forEach(rec=>{
-          if(!rec.id)rec.id=crypto.randomUUID();
-          byId.set(String(rec.id),rec);
+        const remoteIds=new Set();
+        remote.forEach(x=>{
+          const id=String(x.id);
+          remoteIds.add(id);
+          byId.set(id,{...x.record,id:x.id});
         });
-        state[page]=[...byId.values()];
         for(const rec of local){
+          if(!rec.id)rec.id=crypto.randomUUID();
+          const id=String(rec.id);
+          if(remoteIds.has(id))continue;
           const jobNumber=moduleJobNumber(rec);
-          try{await api("/api/modules/"+module+"/records",{method:"POST",body:JSON.stringify({id:rec.id,jobNumber,record:rec})})}
-          catch(e){console.warn("Shared save skipped:",page,e.message)}
+          try{
+            await api("/api/modules/"+module+"/records",{method:"POST",body:JSON.stringify({id:rec.id,jobNumber,record:rec})});
+            byId.set(id,rec);
+            remoteIds.add(id);
+          }catch(e){
+            console.warn("Legacy register import skipped:",page,e.message);
+            byId.set(id,rec);
+          }
         }
+        state[page]=[...byId.values()];
       }
       originalSetItem.call(localStorage,"modifyRecordsV2",JSON.stringify(state));
       window.dispatchEvent(new CustomEvent("modify-shared-records-loaded",{detail:state}));
