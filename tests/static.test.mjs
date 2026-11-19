@@ -102,6 +102,7 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
   assert.match(app, /api\/modules\/schedule\/records/);
   assert.match(app, /Save assignment/);
   assert.match(app, /Delete assignment/);
+  assert.match(app, /currentUser.role==="employee"&&a.workerName===w.name/);
   assert.match(app, /Previous/);
   assert.match(app, /This week/);
 });
