@@ -228,7 +228,7 @@
     const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{
       const key=dateKey(d),items=assignments.filter(a=>(a.workerId===w.id||(!canEdit&&a.workerName===w.name))&&a.date===key);
       const html=items.length?items.map(a=>'<button type="button" class="shift" data-edit-shift="'+esc(a.id)+'"><strong>'+esc(a.jobNumber||"Job")+'</strong>'+esc(a.jobName||"Project not set")+(a.startTime?' · '+esc(a.startTime):"")+'</button>').join(""):(canEdit?'<button type="button" class="empty-slot" aria-label="Assign a job to '+esc(w.name)+' on '+esc(dateLabel(d))+'" data-new-shift="'+esc(w.id)+'" data-date="'+key+'"></button>':'—');
-      return '<td>'+html+'</td>';
+      return '<td data-day="'+esc(dateLabel(d))+'">'+html+'</td>';
     }).join("")+'</tr>').join("");
     grid.innerHTML='<table>'+header+'<tbody>'+(rows||'<tr><td colspan="8">No active workers found in the Workforce register.</td></tr>')+'</tbody></table>';
     const editor=$("#schedule-editor");
