@@ -79,7 +79,7 @@ async function handleApi(request, env) {
     if (!await rateLimit(env, clientKey(request) + ":login")) return json({ error: "Too many attempts. Try again in 15 minutes." }, 429);
     // The owner explicitly requested a single shared access word instead of staff accounts/PINs.
     // This is convenience access, not strong authentication: anyone who knows the word has full access.
-    if (!safeEqual(input.password, "Modify")) {
+    if (!safeEqual(input.password.trim().toLowerCase(), "modify")) {
       await audit(env, null, "login_failed", "Shared access word rejected");
       return json({ error: "That word is not correct." }, 401);
     }
