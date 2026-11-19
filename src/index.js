@@ -79,9 +79,11 @@ async function handleApi(request, env) {
     let user = await env.DB.prepare("SELECT id, full_name, staff_code, role, active FROM users WHERE staff_code = 'MODIFY_SHARED'").first();
     const now = Math.floor(Date.now() / 1000);
     if (!user) {
-      const id = randomToken(16), salt = randomToken(16), internalPin = randomToken(24);
+      // Passwordless shared access does not use a PIN. Keep a random placeholder
+      // for the legacy NOT NULL columns without expensive PBKDF2 on first login.
+      const id = randomToken(16), salt = randomToken(16), unusedPinHash = randomToken(32);
       await env.DB.prepare("INSERT INTO users (id, full_name, staff_code, role, pin_salt, pin_hash, active, created_at) VALUES (?, 'MODIFY Team', 'MODIFY_SHARED', 'administrator', ?, ?, 1, ?)")
-        .bind(id, salt, await pinHash(internalPin, salt), now).run();
+        .bind(id, salt, unusedPinHash, now).run();
       user = { id, full_name: "MODIFY Team", staff_code: "MODIFY_SHARED", role: "administrator", active: 1 };
     } else {
       await env.DB.prepare("UPDATE users SET role='administrator', active=1 WHERE id=?").bind(user.id).run();
