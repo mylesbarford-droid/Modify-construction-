@@ -450,7 +450,7 @@ const originalOpen=openRecordForm;
 function newFieldHtml(item,i){
  const [label,type]=item,id="f"+i;let input="";
  if(type==="textarea")input='<textarea id="'+id+'" rows="5" placeholder="Enter details here..."></textarea>';
- else if(type==="file")input='<input id="'+id+'" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">';
+ else if(type==="file")input='<input id="'+id+'" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt">';
  else if(type==="jobselect")input='<select id="'+id+'">'+jobSelect()+'</select>';
  else if(type.startsWith("select:"))input='<select id="'+id+'">'+type.slice(7).split("|").map(v=>'<option>'+escapeHtml(v)+'</option>').join("")+'</select>';
  else input='<input id="'+id+'" type="'+type+'">';
