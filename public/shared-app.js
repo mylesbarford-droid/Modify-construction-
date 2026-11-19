@@ -98,18 +98,32 @@
     finally{syncingModules=false}
   }
   Storage.prototype.setItem=function(key,value){
+    let changedRecords=[];
     if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
       try{
         const before=JSON.parse(this.getItem(key)||"{}"),after=JSON.parse(value||"{}");
         for(const [page,module] of Object.entries(moduleMap)){
-          const oldRows=Array.isArray(before[page])?before[page]:[],newIds=new Set((Array.isArray(after[page])?after[page]:[]).map(x=>String(x.id||"")).filter(Boolean));
+          const oldRows=Array.isArray(before[page])?before[page]:[],newRows=Array.isArray(after[page])?after[page]:[];
+          const oldById=new Map(oldRows.filter(x=>x&&x.id).map(x=>[String(x.id),x]));
+          const newIds=new Set(newRows.map(x=>String(x?.id||"")).filter(Boolean));
           oldRows.forEach(row=>{if(row.id&&!newIds.has(String(row.id)))pendingModuleDeletes.push({module,id:String(row.id)})});
+          newRows.forEach(row=>{
+            if(!row?.id)return;
+            const previous=oldById.get(String(row.id));
+            if(previous&&JSON.stringify(previous)!==JSON.stringify(row))changedRecords.push({module,id:String(row.id),record:row,jobNumber:moduleJobNumber(row)});
+          });
         }
       }catch(e){console.warn("Could not compare register changes",e)}
     }
     originalSetItem.call(this,key,value);
     if(key==="modifyRecordsV2"&&currentUser&&!syncingModules){
-      syncQueue=syncQueue.then(()=>syncOperationalRegisters()).catch(e=>console.warn("Register sync failed",e));
+      syncQueue=syncQueue.then(async()=>{
+        for(const item of changedRecords){
+          try{await api("/api/modules/"+item.module+"/records",{method:"POST",body:JSON.stringify({id:item.id,jobNumber:item.jobNumber,record:item.record})})}
+          catch(e){console.warn("Shared register update failed:",item.module,item.id,e.message)}
+        }
+        await syncOperationalRegisters();
+      }).catch(e=>console.warn("Register sync failed",e));
     }
   };
   let sharedJobs=[];
