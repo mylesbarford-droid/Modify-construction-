@@ -64,3 +64,19 @@ test("shared operational records take precedence over stale browser copies", () 
   assert.match(app, /if\(remoteIds\.has\(id\)\)continue/);
   assert.doesNotMatch(app, /byId\.set\(String\(rec\.id\),rec\)/);
 });
+
+const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+const manifest = await readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8");
+const serviceWorker = await readFile(new URL("../public/service-worker.js", import.meta.url), "utf8");
+
+test("MODIFY is installable as a PWA without caching private company data", () => {
+  const appManifest = JSON.parse(manifest);
+  assert.equal(appManifest.name, "MODIFY Construction Management");
+  assert.equal(appManifest.display, "standalone");
+  assert.ok(appManifest.icons.some(icon => icon.src === "/icons/modify.svg"));
+  assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
+  assert.match(html, /serviceWorker\.register\("\/service-worker\.js"\)/);
+  assert.match(html, /modify-install-app/);
+  assert.match(serviceWorker, /url\.pathname\.startsWith\("\/api\/"\)/);
+  assert.match(serviceWorker, /MODIFY is offline/);
+});
