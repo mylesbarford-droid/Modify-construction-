@@ -4,7 +4,7 @@
   let currentUser=null;
   const css=`
   #modify-auth-cover{position:fixed;inset:0;z-index:10000;background:#090a0c;color:#f5f1e7;display:grid;place-items:center;padding:20px;font-family:system-ui,sans-serif}
-  #modify-auth-cover .authbox{width:min(420px,100%);background:#1a1c20;border:1px solid #c6a34a;border-radius:16px;padding:25px;box-shadow:0 20px 70px #0009}
+  #modify-auth-cover .authbox .auth-logo{display:block;width:min(100%,300px);height:auto;margin:0 auto 18px}\n  #modify-auth-cover .authbox{width:min(420px,100%);background:#1a1c20;border:1px solid #c6a34a;border-radius:16px;padding:25px;box-shadow:0 20px 70px #0009}
   #modify-auth-cover h1{margin:0 0 5px;font-size:25px}#modify-auth-cover p{color:#b8b5ac;font-size:13px}
   #modify-auth-cover label{display:block;font-size:12px;margin:13px 0 5px;color:#e0c477}
   #modify-auth-cover input,#modify-staff-panel input,#modify-staff-panel select,#modify-job-api select,#modify-job-api textarea{width:100%;padding:11px;border:1px solid #48443a;border-radius:8px;background:#111317;color:#f4f1e8}
@@ -27,7 +27,7 @@
   @media(max-width:600px){#modify-staff-panel .staffgrid,#modify-job-api .api-grid{grid-template-columns:1fr}#modify-job-api .api-wide{grid-column:auto}#modify-staff-panel{inset:3% 3%}}
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
-  const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><h1>MODIFY Construction</h1><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
+  const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
   document.body.appendChild(cover);
   const api=async(path,opts={})=>{const r=await fetch(path,{credentials:"same-origin",...opts,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data};
   function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>Open company access · no password</span>'}
