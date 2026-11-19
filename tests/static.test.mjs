@@ -93,6 +93,19 @@ test("open company access creates an administrator session without a password", 
   assert.doesNotMatch(app, /modify-staff-open/);
 });
 
+test("workforce schedule is shared, job-linked and editable with role-based access", () => {
+  assert.match(worker, /schedule:read/);
+  assert.match(worker, /schedule:write/);
+  assert.match(worker, /schedule: "schedule"/);
+  assert.match(app, /Workforce Schedule/);
+  assert.match(app, /Weekly workforce calendar/);
+  assert.match(app, /api\/modules\/schedule\/records/);
+  assert.match(app, /Save assignment/);
+  assert.match(app, /Delete assignment/);
+  assert.match(app, /Previous/);
+  assert.match(app, /This week/);
+});
+
 test("documents upload to shared D1 storage and can be retrieved across devices", () => {
   assert.match(worker, /X-File-Id/);
   assert.match(worker, /application\/pdf/);
