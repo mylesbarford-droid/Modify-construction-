@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#111827">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/modify.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/modify.svg">
 <title>MODIFY | Construction Management</title>
 <style>
 :root{--ink:#17202b;--muted:#738092;--line:#e7ebef;--paper:#f5f7f9;--white:#fff;--orange:#ef7d32;--nav:#111923;--green:#16865b;--red:#c94d4d}
@@ -201,7 +204,13 @@ html,body{min-height:100%;height:auto!important;overflow-y:auto!important;oversc
 .doc-category.selected{border-color:var(--gold,#d1ad59);box-shadow:inset 0 0 0 1px var(--gold,#d1ad59)}
 #docCategoryFilter{min-width:180px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#111317;color:#f4f1e8}
 @media(max-width:560px){.doc-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc-category{padding:12px;min-height:100px}}
-</style></head>
+</style>
+<style id="modify-pwa-install-style">
+#modify-install-app{position:fixed;right:18px;bottom:18px;z-index:30;border:1px solid #c6a34a;background:#c6a34a;color:#090a0c;border-radius:999px;padding:12px 18px;font:700 14px/1.2 system-ui,sans-serif;box-shadow:0 5px 22px #0005;display:none}
+#modify-install-app:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(max-width:650px){#modify-install-app{right:12px;bottom:12px}}
+</style>
+</head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar">
@@ -743,5 +752,47 @@ renderV2();
 </script>
 
 <script src="/shared-app.js" defer></script>
-<script>window.addEventListener("modify-shared-records-loaded",event=>{if(event.detail&&typeof event.detail==="object"){records=event.detail;if(typeof window.renderV2==="function")window.renderV2()}});</script>\n</body>
+<script>window.addEventListener("modify-shared-records-loaded",event=>{if(event.detail&&typeof event.detail==="object"){records=event.detail;if(typeof window.renderV2==="function")window.renderV2()}});</script>\n
+<button id="modify-install-app" type="button" aria-label="Install MODIFY Construction app">Install MODIFY app</button>
+<script>
+(() => {
+  let installPrompt = null;
+  const button = document.getElementById("modify-install-app");
+  if (!button) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (isIOS && !isStandalone) button.style.display = "block";
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    installPrompt = event;
+    if (!isStandalone) button.style.display = "block";
+  });
+  window.addEventListener("appinstalled", () => {
+    installPrompt = null;
+    button.style.display = "none";
+  });
+  button.addEventListener("click", async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      await installPrompt.userChoice;
+      installPrompt = null;
+      button.style.display = "none";
+      return;
+    }
+    if (isIOS) {
+      alert('To install MODIFY: tap the Share button in Safari, then choose "Add to Home Screen".');
+    } else {
+      alert('To install MODIFY: open your browser menu and choose "Install app" or "Add to Home Screen".');
+    }
+  });
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/service-worker.js").catch(error => {
+        console.warn("MODIFY app installation support could not start:", error);
+      });
+    });
+  }
+})();
+</script>
+</body>
 </html>
