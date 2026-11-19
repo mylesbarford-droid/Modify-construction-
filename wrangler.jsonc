@@ -7,5 +7,20 @@
     "directory": "./public",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "modify-construction-db",
+      "database_id": "f3b52a1b-41f1-41a9-901f-da864f6b6aad"
+    }
+  ],
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_id": "f3b52a1b-41f1-41a9-901f-da864f6b6aad"
+      }
+    ]
   }
 }
