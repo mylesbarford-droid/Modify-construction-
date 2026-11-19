@@ -74,15 +74,8 @@ async function handleApi(request, env) {
   if (!env.DB) return json({ error: "The shared database is not configured yet." }, 503);
   const url = new URL(request.url);
   if (request.method === "POST" && url.pathname === "/api/auth/login") {
-    const input = await body(request);
-    if (!input || typeof input.password !== "string") return json({ error: "Type Modify to enter the app." }, 400);
-    if (!await rateLimit(env, clientKey(request) + ":login")) return json({ error: "Too many attempts. Try again in 15 minutes." }, 429);
-    // The owner explicitly requested a single shared access word instead of staff accounts/PINs.
-    // This is convenience access, not strong authentication: anyone who knows the word has full access.
-    if (!safeEqual(input.password.trim().toLowerCase(), "modify")) {
-      await audit(env, null, "login_failed", "Shared access word rejected");
-      return json({ error: "That word is not correct." }, 401);
-    }
+    // Owner-requested open access: no password or PIN is required.
+    // WARNING: anyone on the public internet can access and change company data.
     let user = await env.DB.prepare("SELECT id, full_name, staff_code, role, active FROM users WHERE staff_code = 'MODIFY_SHARED'").first();
     const now = Math.floor(Date.now() / 1000);
     if (!user) {
