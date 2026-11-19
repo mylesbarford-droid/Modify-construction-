@@ -121,6 +121,40 @@ async function handleApi(request, env) {
   }
   const session = await getSession(request, env);
   if (!session) return json({ error: "Please sign in again." }, 401, { "set-cookie": clearCookie("modify_session") });
+  // Shared company attachments and workforce photographs are stored in R2.
+  if (request.method === "POST" && url.pathname === "/api/files") {
+    if (!env.FILES) return json({ error: "Shared file storage is not configured." }, 503);
+    const length = Number(request.headers.get("Content-Length") || 0);
+    if (length > 20 * 1024 * 1024) return json({ error: "Files must be 20 MB or smaller." }, 413);
+    const data = await request.arrayBuffer();
+    if (!data.byteLength || data.byteLength > 20 * 1024 * 1024) return json({ error: "File must be between 1 byte and 20 MB." }, 413);
+    const idHeader = request.headers.get("X-File-Id") || randomToken(16);
+    const id = /^[a-f0-9]{32}$/.test(idHeader) ? idHeader : randomToken(16);
+    const rawName = request.headers.get("X-File-Name") || "attachment";
+    let name = rawName;
+    try { name = decodeURIComponent(rawName); } catch {}
+    name = name.replace(/[\\/\\r\\n\\0]/g, "_").slice(0, 180) || "attachment";
+    const type = (request.headers.get("Content-Type") || "application/octet-stream").split(";")[0].trim().toLowerCase();
+    const key = "shared-files/" + id;
+    await env.FILES.put(key, data, { httpMetadata: { contentType: type }, customMetadata: { fileName: name } });
+    await audit(env, session, "shared_file_uploaded", id + ":" + name);
+    return json({ id, name, type, size: data.byteLength }, 201);
+  }
+  const sharedFile = url.pathname.match(/^\\/api\\/files\\/([a-f0-9]{32})$/);
+  if (sharedFile && request.method === "GET") {
+    if (!env.FILES) return json({ error: "Shared file storage is not configured." }, 503);
+    const object = await env.FILES.get("shared-files/" + sharedFile[1]);
+    if (!object) return json({ error: "File not found." }, 404);
+    const name = object.customMetadata?.fileName || "attachment";
+    return new Response(object.body, { headers: {
+      "content-type": object.httpMetadata?.contentType || "application/octet-stream",
+      "content-disposition": 'inline; filename="' + name.replace(/["\\\\]/g, "_") + '"',
+      "x-file-name": encodeURIComponent(name),
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff"
+    }});
+  }
+
   if (request.method === "POST" && url.pathname === "/api/auth/users") {
     if (session.role !== "administrator") return json({ error: "Only the administrator can create staff accounts." }, 403);
     const input = await body(request);
