@@ -95,7 +95,7 @@ test("open company access creates an administrator session without a password", 
 
 test("documents upload to shared D1 storage and can be retrieved across devices", () => {
   assert.match(worker, /X-File-Id/);
-  assert.match(worker, /application\\/pdf/);
+  assert.match(worker, /application\/pdf/);
   assert.match(worker, /Each document must be between 1 byte and 8 MB/);
   assert.match(worker, /INSERT OR REPLACE INTO shared_files/);
   assert.match(worker, /SELECT file_name,content_type,data_base64 FROM shared_files/);
