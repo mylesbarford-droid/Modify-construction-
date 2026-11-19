@@ -80,3 +80,13 @@ test("MODIFY is installable as a PWA without caching private company data", () =
   assert.match(serviceWorker, /url\.pathname\.startsWith\("\/api\/"\)/);
   assert.match(serviceWorker, /MODIFY is offline/);
 });
+
+test("shared Modify access uses one word and no individual login fields", () => {
+  assert.match(worker, /safeEqual\(input\.password, "Modify"\)/);
+  assert.match(worker, /MODIFY_SHARED/);
+  assert.match(app, /name="password"/);
+  assert.match(app, /password:f\.get\("password"\)/);
+  assert.doesNotMatch(app, /name="staffCode"/);
+  assert.doesNotMatch(app, /name="pin"/);
+  assert.doesNotMatch(app, /modify-staff-open/);
+});
