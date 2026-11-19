@@ -92,3 +92,12 @@ test("open company access creates an administrator session without a password", 
   assert.doesNotMatch(app, /name="pin"/);
   assert.doesNotMatch(app, /modify-staff-open/);
 });
+
+test("shared workforce and job photos use existing D1 storage without paid R2 bindings", () => {
+  assert.match(worker, /INSERT OR REPLACE INTO shared_files/);
+  assert.match(worker, /SELECT file_name,content_type,data_base64 FROM shared_files/);
+  assert.match(worker, /INSERT INTO shared_files/);
+  assert.doesNotMatch(worker, /env\\.(?:FILES|JOB_PHOTOS)/);
+  assert.match(html, /uploadSharedPhoto/);
+  assert.match(html, /window\\.saveModifyFiles=saveFiles/);
+});
