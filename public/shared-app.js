@@ -47,10 +47,6 @@
   document.body.appendChild(cover);
   const api=async(path,opts={})=>{const r=await fetch(path,{credentials:"same-origin",...opts,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data};
   function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>Open company access · no password</span>'}
-  const scheduleNav=document.createElement("button");
-  scheduleNav.dataset.page="Workforce Schedule";
-  scheduleNav.innerHTML='<span class="ico">▦</span>Workforce Schedule';
-  $("#nav")?.appendChild(scheduleNav);
   const moduleMap={
     "Money":"money","Plant & Equipment":"plant","Vehicles":"vehicles","Workforce":"workforce",
     "Health & Safety":"safety",
@@ -317,16 +313,5 @@
     new MutationObserver(attachJobUpdates).observe(pageBody,{childList:true,subtree:true});
     attachJobUpdates();
   }
-  // Route the dedicated Workforce Schedule navigation item to its actual weekly calendar renderer.
-  // Without this handler the generic page router falls back to the old records screen.
-  document.addEventListener("click",e=>{
-    const b=e.target.closest('#nav button[data-page="Workforce Schedule"]');
-    if(!b)return;
-    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-    document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));
-    $("#sidebar")?.classList.remove("open");
-    renderWorkforceSchedule();
-  },true);
-
   boot();
 })();
