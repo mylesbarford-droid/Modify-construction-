@@ -18,16 +18,19 @@ This branch includes:
 
 The Worker uses `src/index.js` and serves the dashboard from `public/`.
 
+For Cloudflare Workers Builds, use **no build command** and set the **deploy command** to `npx wrangler deploy`. Do not use `npx wrangler preview` as the deploy command. Preview mode is not a production deployment and can require separate preview bindings.
+
 Required bindings and secrets:
 - D1 binding named `DB`, pointing to the company database.
 - Worker secret `COMPANY_LOGIN_PASSWORD`.
 - Worker secret `BOOTSTRAP_KEY` for first-administrator setup only.
 - Private R2 bucket binding `JOB_PHOTOS` for site photo uploads.
 
-Apply the migrations in order:
+Apply all migrations in order:
 1. `migrations/0001_auth.sql`
 2. `migrations/0002_job_updates.sql`
 3. `migrations/0003_jobs.sql`
+4. `migrations/0004_shared_modules.sql`
 
 The first administrator is created once through `/setup.html`. The setup flow requires the `BOOTSTRAP_KEY`; remove that secret immediately after the administrator is created. Never put passwords, PINs, bootstrap keys or API tokens in source control.
 
@@ -44,7 +47,7 @@ D1 is the source of truth for Jobs & Sites:
 ## Remaining limitations — not production-ready
 
 This is an integration milestone, not a finished production system:
-- The `0003_jobs.sql` migration must be applied to the live D1 database before the central Jobs & Sites feature can run there.
+- The `0003_jobs.sql` and `0004_shared_modules.sql` migrations must be applied to the live D1 database before the central Jobs & Sites and shared operational registers can run there.
 - The private R2 bucket and `JOB_PHOTOS` binding are not configured; photo uploads are therefore unavailable.
 - Materials, documents, money, workforce, timesheets and other dashboard modules have not all been migrated to shared D1 storage. Do not assume that every screen is shared between staff.
 - Legacy job import must be run from a browser that still has the old local records.
