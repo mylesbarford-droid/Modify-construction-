@@ -2,6 +2,14 @@
 
 A mobile-responsive construction management dashboard with a shared sign-in and central job register.
 
+## Install MODIFY as an app
+
+The dashboard includes Progressive Web App (PWA) support:
+- Open the deployed HTTPS website in a supported browser and choose **Install MODIFY app** (or the browser's Install app option).
+- On iPhone/iPad, open the website in Safari, tap Share, then choose **Add to Home Screen**.
+- The app shell can open offline if it was previously loaded, but company sign-in, shared records, updates and photo uploads still require an internet connection.
+- The service worker deliberately does not cache API responses, authentication or private company records.
+
 ## Current implementation
 
 This branch includes:
