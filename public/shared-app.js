@@ -226,11 +226,12 @@
       if(liveTarget&&liveTarget!==target&&!liveTarget.dataset.loaded)renderDashboardCalendar();
     }
   }
-  const dashboardBody=$("#pagebody");
-  if(dashboardBody)new MutationObserver(()=>{
+  // Observe the document body, not the original page container: the dashboard renderer can replace #pagebody itself.
+  // Watching document.body ensures a newly-created calendar target is always detected.
+  if(document.body)new MutationObserver(()=>{
     const target=$("#dashboard-weekly-calendar");
     if(target&&!target.dataset.loading&&!target.dataset.loaded)renderDashboardCalendar();
-  }).observe(dashboardBody,{childList:true,subtree:true});
+  }).observe(document.body,{childList:true,subtree:true});
   const dashboardCalendarStyle=document.createElement("style");
   dashboardCalendarStyle.textContent=`
     #dashboard-calendar-card .dc-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 12px;color:#e0c477}
