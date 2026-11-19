@@ -257,6 +257,7 @@
     grid.querySelectorAll("[data-new-shift]").forEach(b=>b.onclick=()=>openEditor({},b.dataset.newShift,b.dataset.date));
     grid.querySelectorAll("[data-edit-shift]").forEach(b=>b.onclick=()=>{const a=assignments.find(x=>x.id===b.dataset.editShift);if(a)openEditor(a)});
   }
+  window.renderWorkforceSchedule=renderWorkforceSchedule;
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
   async function renderJobUpdates(jobFilter=null){
     const body=$("#pagebody");if(!body)return;
