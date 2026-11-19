@@ -67,7 +67,7 @@
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
   const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
   document.body.appendChild(cover);
-  const api=async(path,opts={})=>{const r=await fetch(path,{credentials:"same-origin",...opts,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data};
+  const api=async(path,opts={})=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);let r;try{r=await fetch(path,{credentials:"same-origin",...opts,signal:controller.signal,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}})}catch(e){if(e.name==="AbortError")throw new Error("Request timed out. Please check your connection and try again.");throw e}finally{clearTimeout(timer)}const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data};
   function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>Open company access · no password</span>'}
   const moduleMap={
     "Money":"money","Plant & Equipment":"plant","Vehicles":"vehicles","Workforce":"workforce",
@@ -221,6 +221,7 @@
       const results=await Promise.all([api("/api/jobs"),canEdit?api("/api/modules/workforce/records"):Promise.resolve({records:[]}),api("/api/modules/schedule/records")]);
       jobs=results[0].jobs||[];
       workers=canEdit?(results[1].records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status))):[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
+      if(canEdit&&!workers.length){try{const accountData=await api("/api/auth/users");workers=(accountData.users||[]).filter(u=>u.active!==0).map(u=>({id:String(u.id),name:u.name||"Team member",role:u.role||""}))}catch{}}
       assignments=(results[2].records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||"")}));
       if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
     }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected)grid.textContent="The calendar could not load: "+e.message;return}
@@ -253,7 +254,7 @@
         catch(e){message.textContent="Could not delete allocation: "+e.message}
       };
     }
-    $("#schedule-assign").onclick=()=>openEditor({},workers[0]?.id||"",dateKey(new Date()));
+    $("#schedule-assign").onclick=()=>{if(!canEdit){message.textContent="Your account can view the calendar but cannot assign jobs.";return}if(!workers.length){message.textContent="No workers are available to assign. Add staff in the Workforce register first.";return}if(!jobs.length){message.textContent="No jobs are available. Add a job in Jobs & Sites first.";return}openEditor({},workers[0].id,dateKey(new Date()))};
     grid.querySelectorAll("[data-new-shift]").forEach(b=>b.onclick=()=>openEditor({},b.dataset.newShift,b.dataset.date));
     grid.querySelectorAll("[data-edit-shift]").forEach(b=>b.onclick=()=>{const a=assignments.find(x=>x.id===b.dataset.editShift);if(a)openEditor(a)});
   }
