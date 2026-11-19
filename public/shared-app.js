@@ -180,6 +180,69 @@
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   const dateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
   const dateLabel=d=>d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+  let dashboardWeekOffset=0,dashboardCalendarLoading=false;
+  const dashboardDateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+  async function renderDashboardCalendar(){
+    const target=$("#dashboard-weekly-calendar");
+    if(!target||dashboardCalendarLoading||!currentUser)return;
+    dashboardCalendarLoading=true;
+    target.textContent="Loading weekly workforce calendar…";
+    const monday=new Date();monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7)+dashboardWeekOffset*7);
+    const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(d.getDate()+i);return d});
+    const label=d=>d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+    try{
+      const canSeeTeam=["administrator","office_manager","site_manager"].includes(currentUser.role);
+      let workers=[];
+      if(canSeeTeam){
+        const result=await api("/api/modules/workforce/records");
+        workers=(result.records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status)));
+      }else{
+        workers=[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
+      }
+      const result=await api("/api/modules/schedule/records");
+      const assignments=(result.records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:x.jobNumber||x.record?.jobNumber||""}));
+      const head='<thead><tr><th class="dc-worker">Worker</th>'+days.map(d=>'<th>'+label(d)+'</th>').join("")+'</tr></thead>';
+      const rows=workers.map(w=>{
+        const cells=days.map(d=>{
+          const key=dashboardDateKey(d);
+          const matches=assignments.filter(a=>(a.workerId===w.id||(!canSeeTeam&&a.workerName===w.name))&&a.date===key);
+          return '<td>'+ (matches.length?matches.map(a=>'<div class="dc-shift"><strong>'+esc(a.jobNumber||"Job")+'</strong><span>'+esc(a.jobName||"Project not set")+'</span>'+(a.startTime?'<small>'+esc(a.startTime)+'</small>':"")+'</div>').join(""):'<span class="dc-empty">—</span>')+'</td>';
+        }).join("");
+        return '<tr><th class="dc-worker">'+esc(w.name)+(w.role?'<small>'+esc(w.role)+'</small>':"")+'</th>'+cells+'</tr>';
+      }).join("");
+      const range=label(days[0])+" – "+label(days[6]);
+      target.innerHTML='<div class="dc-toolbar"><strong>'+range+'</strong><div><button type="button" id="dc-prev" aria-label="Previous week">←</button> <button type="button" id="dc-today">This week</button> <button type="button" id="dc-next" aria-label="Next week">→</button></div></div><div class="dc-scroll"><table class="dc-table">'+head+'<tbody>'+(rows||'<tr><td colspan="8">No active workers found. Add your team in Workforce to show the calendar.</td></tr>')+'</tbody></table></div><p class="dc-note">Live shared assignments · Select “Open full calendar” to add or edit jobs.</p>';
+      $("#dc-prev").onclick=()=>{dashboardWeekOffset--;renderDashboardCalendar()};
+      $("#dc-next").onclick=()=>{dashboardWeekOffset++;renderDashboardCalendar()};
+      $("#dc-today").onclick=()=>{dashboardWeekOffset=0;renderDashboardCalendar()};
+    }catch(e){
+      target.textContent="The weekly calendar could not load: "+e.message;
+    }finally{dashboardCalendarLoading=false}
+  }
+  const dashboardBody=$("#pagebody");
+  if(dashboardBody)new MutationObserver(()=>{
+    if($("#dashboard-weekly-calendar")&&!$("#dashboard-weekly-calendar").dataset.ready){
+      $("#dashboard-weekly-calendar").dataset.ready="1";
+      renderDashboardCalendar();
+    }
+  }).observe(dashboardBody,{childList:true});
+  const dashboardCalendarStyle=document.createElement("style");
+  dashboardCalendarStyle.textContent=`
+    #dashboard-calendar-card .dc-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 12px;color:#e0c477}
+    #dashboard-calendar-card .dc-toolbar button{background:#29251c;color:#f4f1e8;border:1px solid #80652d;border-radius:7px;padding:7px 10px}
+    #dashboard-calendar-card .dc-scroll{overflow-x:auto;border:1px solid #39352b;border-radius:10px}
+    #dashboard-calendar-card .dc-table{width:100%;min-width:880px;border-collapse:collapse;background:#15171b}
+    #dashboard-calendar-card .dc-table th,#dashboard-calendar-card .dc-table td{border:1px solid #39352b;padding:8px;vertical-align:top;text-align:left;font-size:12px}
+    #dashboard-calendar-card .dc-table thead th{background:#29251c;color:#e0c477;white-space:nowrap}
+    #dashboard-calendar-card .dc-table .dc-worker{position:sticky;left:0;z-index:1;min-width:150px;background:#1a1c20;color:#f4f1e8}
+    #dashboard-calendar-card .dc-worker small{display:block;color:#b8b5ac;font-weight:400;margin-top:3px}
+    #dashboard-calendar-card .dc-shift{display:grid;gap:3px;background:#29251c;border:1px solid #80652d;border-radius:7px;padding:7px;margin:2px 0;min-width:90px}
+    #dashboard-calendar-card .dc-shift strong{color:#e0c477}
+    #dashboard-calendar-card .dc-shift span{color:#f4f1e8}
+    #dashboard-calendar-card .dc-shift small,#dashboard-calendar-card .dc-note{color:#b8b5ac}
+    #dashboard-calendar-card .dc-empty{color:#777;display:block;text-align:center;padding:9px}
+  `;
+  document.head.appendChild(dashboardCalendarStyle);
   async function renderWorkforceSchedule(anchor=new Date()){
     const body=$("#pagebody");if(!body)return;
     $("#title").textContent="Workforce Schedule";$("#subtitle").textContent="Live workforce allocation · Shared across the company · Edit assignments by day and job";$("#crumb").textContent="Workforce Schedule";$("#add").style.display="none";
