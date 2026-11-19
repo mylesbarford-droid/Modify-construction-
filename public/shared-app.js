@@ -203,7 +203,7 @@
   let workforceScheduleRenderId=0;
   async function renderWorkforceSchedule(anchor=new Date()){
     const renderId=++workforceScheduleRenderId,body=$("#pagebody");
-    if(!body)return;if(!currentUser){body.innerHTML="<div class=\"schedule-card\">Loading your company workspace…</div>";return;}
+    if(!body)return;if(!currentUser){window.current="Workforce Job Calendar";body.innerHTML="<div class=\"schedule-card\">Loading your company workspace…</div>";return;}
     const canEdit=["administrator","office_manager","site_manager"].includes(currentUser.role);
     const monday=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate());
     monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
@@ -218,12 +218,16 @@
     const grid=$("#schedule-grid"),message=$("#schedule-message");
     let workers=[],jobs=[],assignments=[];
     try{
-      const results=await Promise.all([api("/api/jobs"),canEdit?api("/api/modules/workforce/records"):Promise.resolve({records:[]}),api("/api/modules/schedule/records")]);
-      jobs=results[0].jobs||[];
-      workers=canEdit?(results[1].records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status))):[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
-      if(canEdit&&!workers.length){try{const accountData=await api("/api/auth/users");workers=(accountData.users||[]).filter(u=>u.active!==0).map(u=>({id:String(u.id),name:u.name||"Team member",role:u.role||""}))}catch{}}
-      assignments=(results[2].records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||"")}));
+      const results=await Promise.allSettled([api("/api/jobs"),canEdit?api("/api/modules/workforce/records"):Promise.resolve({records:[]}),api("/api/modules/schedule/records")]);
+      const loadErrors=[];
+      if(results[0].status==="fulfilled")jobs=results[0].value.jobs||[];else loadErrors.push("Jobs: "+results[0].reason.message);
+      workers=canEdit?(results[1].status==="fulfilled"?(results[1].value.records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status))):[]):[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
+      if(canEdit&&results[1].status==="rejected")loadErrors.push("Workforce: "+results[1].reason.message);
+      if(canEdit&&!workers.length){try{const accountData=await api("/api/auth/users");workers=(accountData.users||[]).filter(u=>u.active!==0).map(u=>({id:String(u.id),name:u.name||"Team member",role:u.role||""}))}catch(e){loadErrors.push("Staff list: "+e.message)}}
+      if(results[2].status==="fulfilled")assignments=(results[2].value.records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||"")}));
+      else loadErrors.push("Existing allocations: "+results[2].reason.message);
       if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
+      if(loadErrors.length)message.textContent="Some calendar data could not load. "+loadErrors.join(" · ");
     }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected)grid.textContent="The calendar could not load: "+e.message;return}
     const header='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
     const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{
