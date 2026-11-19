@@ -75,23 +75,31 @@ async function handleApi(request, env) {
   const url = new URL(request.url);
   if (request.method === "POST" && url.pathname === "/api/auth/login") {
     const input = await body(request);
-    if (!input || typeof input.companyPassword !== "string" || typeof input.staffCode !== "string" || typeof input.pin !== "string") return json({ error: "Enter the company password, staff code and PIN." }, 400);
+    if (!input || typeof input.password !== "string") return json({ error: "Type Modify to enter the app." }, 400);
     if (!await rateLimit(env, clientKey(request) + ":login")) return json({ error: "Too many attempts. Try again in 15 minutes." }, 429);
-    if (!env.COMPANY_LOGIN_PASSWORD || !safeEqual(input.companyPassword, env.COMPANY_LOGIN_PASSWORD)) {
-      await audit(env, null, "login_failed", "Company login rejected");
-      return json({ error: "Sign-in details are incorrect." }, 401);
+    // The owner explicitly requested a single shared access word instead of staff accounts/PINs.
+    // This is convenience access, not strong authentication: anyone who knows the word has full access.
+    if (!safeEqual(input.password, "Modify")) {
+      await audit(env, null, "login_failed", "Shared access word rejected");
+      return json({ error: "That word is not correct." }, 401);
     }
-    const user = await env.DB.prepare("SELECT id, full_name, staff_code, role, pin_salt, pin_hash, active FROM users WHERE lower(staff_code) = lower(?)").bind(input.staffCode.trim()).first();
-    if (!user || !user.active || !/^\d{6}$/.test(input.pin) || !safeEqual(await pinHash(input.pin, user.pin_salt || ""), user.pin_hash || "")) {
-      await audit(env, null, "login_failed", "Personal PIN rejected");
-      return json({ error: "Sign-in details are incorrect." }, 401);
+    let user = await env.DB.prepare("SELECT id, full_name, staff_code, role, active FROM users WHERE staff_code = 'MODIFY_SHARED'").first();
+    const now = Math.floor(Date.now() / 1000);
+    if (!user) {
+      const id = randomToken(16), salt = randomToken(16), internalPin = randomToken(24);
+      await env.DB.prepare("INSERT INTO users (id, full_name, staff_code, role, pin_salt, pin_hash, active, created_at) VALUES (?, 'MODIFY Team', 'MODIFY_SHARED', 'administrator', ?, ?, 1, ?)")
+        .bind(id, salt, await pinHash(internalPin, salt), now).run();
+      user = { id, full_name: "MODIFY Team", staff_code: "MODIFY_SHARED", role: "administrator", active: 1 };
+    } else {
+      await env.DB.prepare("UPDATE users SET role='administrator', active=1 WHERE id=?").bind(user.id).run();
+      user.role = "administrator"; user.active = 1;
     }
     const token = randomToken();
-    const expires = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+    const expires = now + SESSION_TTL_SECONDS;
     await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(randomToken(16), user.id, await digest(token), expires, Math.floor(Date.now() / 1000)).run();
-    await audit(env, { user_id: user.id }, "login", "Successful sign-in");
-    return json({ user: { id: user.id, name: user.full_name, staffCode: user.staff_code, role: user.role, permissions: PERMISSIONS[user.role] || [] } }, 200, { "set-cookie": cookie("modify_session", token, SESSION_TTL_SECONDS) });
+      .bind(randomToken(16), user.id, await digest(token), expires, now).run();
+    await audit(env, { user_id: user.id }, "shared_login", "Shared MODIFY access");
+    return json({ user: { id: user.id, name: "MODIFY Team", staffCode: "MODIFY_SHARED", role: "administrator", permissions: PERMISSIONS.administrator } }, 200, { "set-cookie": cookie("modify_session", token, SESSION_TTL_SECONDS) });
   }
   if (request.method === "GET" && url.pathname === "/api/auth/me") {
     const session = await getSession(request, env);
