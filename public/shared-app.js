@@ -562,12 +562,17 @@ window.renderWorkforceSchedule=renderWorkforceSchedule;
     });
   }
 
-  // A browser refresh always starts the workspace on the Dashboard.
+  // Remember the selected workspace page so refreshing keeps the user there.
   try{
+    document.addEventListener("click",event=>{
+      const button=event.target.closest('#nav button[data-page]');
+      if(button)sessionStorage.setItem("modifyLastWorkspacePage",button.dataset.page);
+    },true);
     const navigation=performance.getEntriesByType("navigation")[0];
     if(navigation?.type==="reload"){
-      const dashboardButton=document.querySelector('#nav button[data-page="Dashboard"]');
-      if(dashboardButton)dashboardButton.click();
+      const lastPage=sessionStorage.getItem("modifyLastWorkspacePage")||"Dashboard";
+      const pageButton=[...document.querySelectorAll('#nav button[data-page]')].find(button=>button.dataset.page===lastPage);
+      if(pageButton)pageButton.click();
     }
   }catch{}
 
