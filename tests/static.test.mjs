@@ -105,6 +105,9 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
   assert.match(app, /Delete/);
   assert.match(app, /calendar_assignment/);
   assert.match(app, /sch-people/);
+  assert.match(app, /schedule-person/);
+  assert.match(app, /loadDashboardSchedule/);
+  assert.match(app, /Upcoming shifts/);
 
 
 
