@@ -327,7 +327,7 @@
           $("#modify-manager-enter").onclick=async()=>{
             try{
               const pin=$("#modify-manager-pin").value;
-              if(!/^\\d{6}$/.test(pin)){error.textContent="Enter your six-digit PIN.";return}
+              if(!/^\d{6}$/.test(pin)){error.textContent="Enter your six-digit PIN.";return}
               const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name,pin})});await enterWorkspace(d.user);
             }catch(e){error.textContent=e.message}
           };
