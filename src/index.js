@@ -96,8 +96,8 @@ async function handleApi(request, env) {
     if (isJay || isDave) {
       if (!await rateLimit(env, clientKey(request)+":manager:"+normalized, 6)) return json({error:"Too many PIN attempts. Try again in 15 minutes."},429);
       const manager = isJay
-        ? {salt:"bbc5583a5003aff96bf22c21f918f7ee",hash:"6251e517fc59b4cc3d3d47ff1a0271214a56812ba2e24669b5941d99039cf6a2"}
-        : {salt:"77c5d1b0549d0e09dc0c5543e1b9cc6a",hash:"9eb8cba72dd569def97ebbc0b65ef67df282c2057ecc1392c669627ff84f5661"};
+        ? {salt:"bbc5583a5003aff96bf22c21f918f7ee",hash:"1d00c25c02a0281d202ae2ad1d0c09902a4e16042be7d112025abcb1b7ce3f8e"}
+        : {salt:"77c5d1b0549d0e09dc0c5543e1b9cc6a",hash:"45afa5e17cb9e0f477833763f43a45471cf13afc1de270e223208982f3f8e1b7"};
       if (typeof input.pin !== "string" || !safeEqual(await pinHash(input.pin,manager.salt),manager.hash)) return json({error:"That PIN is not correct."},401);
       role = "administrator"; staffCode = isJay ? "JAY_WILSON" : "DAVE_HAWES"; salt=manager.salt; hash=manager.hash;
     } else {
