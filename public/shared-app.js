@@ -544,5 +544,23 @@ window.renderWorkforceSchedule=renderWorkforceSchedule;
     new MutationObserver(attachJobUpdates).observe(pageBody,{childList:true,subtree:true});
     attachJobUpdates();
   }
+  // Make the top MODIFY logo a shortcut back to the dashboard.
+  const topLogo=document.querySelector(".top-modify-logo");
+  if(topLogo){
+    topLogo.setAttribute("role","button");
+    topLogo.setAttribute("tabindex","0");
+    topLogo.setAttribute("aria-label","Return to dashboard");
+    topLogo.style.cursor="pointer";
+    const goDashboard=()=>{
+      const dashboard=document.querySelector('#nav button[data-page="Dashboard"]');
+      if(dashboard)dashboard.click();
+      else window.location.reload();
+    };
+    topLogo.addEventListener("click",goDashboard);
+    topLogo.addEventListener("keydown",event=>{
+      if(event.key==="Enter"||event.key===" "){event.preventDefault();goDashboard();}
+    });
+  }
+
   boot();
 })();
