@@ -545,7 +545,7 @@ window.renderWorkforceSchedule=renderWorkforceSchedule;
     attachJobUpdates();
   }
   // Make the top MODIFY logo a shortcut back to the dashboard.
-  const topLogo=document.querySelector(".top-modify-logo");
+  const topLogo=document.querySelector(".top-modify-logo, .brand");
   if(topLogo){
     topLogo.setAttribute("role","button");
     topLogo.setAttribute("tabindex","0");
@@ -561,6 +561,15 @@ window.renderWorkforceSchedule=renderWorkforceSchedule;
       if(event.key==="Enter"||event.key===" "){event.preventDefault();goDashboard();}
     });
   }
+
+  // A browser refresh always starts the workspace on the Dashboard.
+  try{
+    const navigation=performance.getEntriesByType("navigation")[0];
+    if(navigation?.type==="reload"){
+      const dashboardButton=document.querySelector('#nav button[data-page="Dashboard"]');
+      if(dashboardButton)dashboardButton.click();
+    }
+  }catch{}
 
   boot();
 })();
