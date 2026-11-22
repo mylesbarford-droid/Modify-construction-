@@ -226,7 +226,7 @@
   async function renderWorkforceSchedule(anchor=new Date()){
  const body=$("#pagebody");if(!body)return;
  const month=new Date(anchor.getFullYear(),anchor.getMonth(),1),y=month.getFullYear(),m=month.getMonth();
- const first=new Date(y,m,1),startDay=new Date(y,m,1-((first.getDay()+6)%7)),today=dateKey(new Date());
+ const first=new Date(y,m,1),startDay=new Date(y,m,1-((first.getDay()+6)%7)),dayKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-"),today=dayKey(new Date());
  const label=month.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
  $("#title").textContent="Calendar";$("#subtitle").textContent="Monthly calendar";$("#crumb").textContent="Calendar";
  const add=$("#add");if(add)add.style.display="none";
@@ -236,7 +236,7 @@
  $("#calendar-next").onclick=()=>renderWorkforceSchedule(new Date(y,m+1,1));
  $("#calendar-today").onclick=()=>renderWorkforceSchedule(new Date());
  const cells=Array.from({length:42},(_,i)=>{const d=new Date(startDay);d.setDate(startDay.getDate()+i);return d});
- $("#calendar-days").innerHTML=Array.from({length:6},(_,w)=>'<tr>'+cells.slice(w*7,w*7+7).map(d=>{const k=dateKey(d);return '<td class="calendar-day'+(d.getMonth()!==m?' outside-month':'')+(k===today?' calendar-today':'')+'"><span class="calendar-day-number">'+d.getDate()+'</span></td>'}).join("")+'</tr>').join("");
+ $("#calendar-days").innerHTML=Array.from({length:6},(_,w)=>'<tr>'+cells.slice(w*7,w*7+7).map(d=>{const k=dayKey(d);return '<td class="calendar-day'+(d.getMonth()!==m?' outside-month':'')+(k===today?' calendar-today':'')+'"><span class="calendar-day-number">'+d.getDate()+'</span></td>'}).join("")+'</tr>').join("");
 }
 window.renderWorkforceSchedule=renderWorkforceSchedule;
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
