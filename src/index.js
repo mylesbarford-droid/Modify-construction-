@@ -1,5 +1,5 @@
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
-const PBKDF2_ITERATIONS = 310000;
+const PBKDF2_ITERATIONS = 100000;
 const encoder = new TextEncoder();
 
 function json(data, status = 200, headers = {}) {
@@ -96,8 +96,8 @@ async function handleApi(request, env) {
     if (isJay || isDave) {
       if (!await rateLimit(env, clientKey(request)+":manager:"+normalized, 6)) return json({error:"Too many PIN attempts. Try again in 15 minutes."},429);
       const manager = isJay
-        ? {salt:"bbc5583a5003aff96bf22c21f918f7ee",hash:"6251e517fc59b4cc3d3d47ff1a0271214a56812ba2e24669b5941d99039cf6a2"}
-        : {salt:"77c5d1b0549d0e09dc0c5543e1b9cc6a",hash:"9eb8cba72dd569def97ebbc0b65ef67df282c2057ecc1392c669627ff84f5661"};
+        ? {salt:"bbc5583a5003aff96bf22c21f918f7ee",hash:"afab5ebe7bd8efb02811dc73a4c4bc69bc2630d7c78751ac24bcd71bb9359682"}
+        : {salt:"77c5d1b0549d0e09dc0c5543e1b9cc6a",hash:"8a1cee8fbd0d00b3f02c873a643ffd8ea07966074da56480797fcad3021ecd89"};
       if (typeof input.pin !== "string" || !safeEqual(await pinHash(input.pin,manager.salt),manager.hash)) return json({error:"That PIN is not correct."},401);
       role = "administrator"; staffCode = isJay ? "JAY_WILSON" : "DAVE_HAWES"; salt=manager.salt; hash=manager.hash;
     } else {
