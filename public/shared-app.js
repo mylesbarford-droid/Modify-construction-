@@ -4,7 +4,8 @@
   let currentUser=null;
   const css=`
   #modify-auth-cover{position:fixed;inset:0;z-index:10000;background:#090a0c;color:#f5f1e7;display:grid;place-items:center;padding:20px;font-family:system-ui,sans-serif}
-  #modify-auth-cover .authbox .auth-logo{display:block;width:min(100%,300px);height:auto;margin:0 auto 18px}\n  #modify-auth-cover .authbox{width:min(420px,100%);background:#1a1c20;border:1px solid #c6a34a;border-radius:16px;padding:25px;box-shadow:0 20px 70px #0009}
+  #modify-auth-cover .authbox .auth-logo{display:block;width:min(100%,300px);height:auto;margin:0 auto 18px}
+  #modify-auth-cover .authbox{width:min(420px,100%);background:#1a1c20;border:1px solid #c6a34a;border-radius:16px;padding:25px;box-shadow:0 20px 70px #0009}
   #modify-auth-cover h1{margin:0 0 5px;font-size:25px}#modify-auth-cover p{color:#b8b5ac;font-size:13px}
   #modify-auth-cover label{display:block;font-size:12px;margin:13px 0 5px;color:#e0c477}
   #modify-auth-cover input,#modify-staff-panel input,#modify-staff-panel select,#modify-job-api select,#modify-job-api textarea{width:100%;padding:11px;border:1px solid #48443a;border-radius:8px;background:#111317;color:#f4f1e8}
@@ -29,7 +30,10 @@
   #modify-schedule .schedule-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
   #modify-schedule .schedule-toolbar h2{font-size:24px;letter-spacing:-.6px;margin:0 0 5px;color:#151a22}
   #modify-schedule .schedule-toolbar p{font-size:13px;color:#687386;margin:3px 0}
-  #modify-schedule #schedule-range{font-weight:700;color:#17202b;margin-top:8px}\n  #modify-schedule .calendar-date-heading{display:flex;flex-direction:column;gap:3px;margin:0 0 12px;padding:12px 14px;border:1px solid #f0d3bd;border-left:4px solid #f36b0b;border-radius:10px;background:#fff8f2}\n  #modify-schedule #calendar-month{font-size:19px;font-weight:800;line-height:1.2;color:#17202b;margin:0}\n  #modify-schedule #calendar-selected-day{font-size:13px;font-weight:650;color:#a94708;margin:0}
+  #modify-schedule #schedule-range{font-weight:700;color:#17202b;margin-top:8px}
+  #modify-schedule .calendar-date-heading{display:flex;flex-direction:column;gap:3px;margin:0 0 12px;padding:12px 14px;border:1px solid #f0d3bd;border-left:4px solid #f36b0b;border-radius:10px;background:#fff8f2}
+  #modify-schedule #calendar-month{font-size:19px;font-weight:800;line-height:1.2;color:#17202b;margin:0}
+  #modify-schedule #calendar-selected-day{font-size:13px;font-weight:650;color:#a94708;margin:0}
   #modify-schedule .schedule-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   #modify-schedule .schedule-actions button{border:1px solid #dce1e8;background:#fff;color:#202938;border-radius:9px;padding:10px 13px;font-weight:650;cursor:pointer}
   #modify-schedule .schedule-actions button.primary{background:#f36b0b;border-color:#f36b0b;color:#fff}
@@ -66,8 +70,18 @@
   #modify-schedule .calendar-month-grid td{height:112px;background:#fff;position:relative}
   #modify-schedule .calendar-month-grid td.outside-month{background:#f5f6f8;color:#a4aab4}
   #modify-schedule .calendar-month-grid .calendar-day-number{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;font-weight:650}
-  #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b;color:#fff}\n  #modify-schedule .calendar-month-grid td.calendar-selected{background:#fff8f2;box-shadow:inset 0 0 0 2px #f36b0b}\n  #modify-schedule .calendar-hint{font-size:13px;color:#687386;margin:4px 0 12px}\n  #modify-schedule .calendar-month-grid td{padding:6px;vertical-align:top}\n  #modify-schedule .calendar-date-add{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:#202938;padding:0 0 5px;text-align:left}\n  #modify-schedule .calendar-add-mark{font-size:10px;color:#b84d08}\n  #modify-schedule .calendar-assignment{display:block;width:100%;text-align:left;border:1px solid #f2c49f;border-left:3px solid #f36b0b;border-radius:6px;background:#fff4eb;color:#202938;padding:5px;margin:3px 0;font-size:10px;line-height:1.3;overflow-wrap:anywhere}\n  #modify-schedule .calendar-assignment strong,#modify-schedule .calendar-assignment span,#modify-schedule .calendar-assignment small{display:block}
-  #modify-schedule .calendar-assignment .calendar-note{margin-top:4px;padding-top:4px;border-top:1px solid #f2c49f;color:#68401f;font-size:11px;white-space:normal;overflow-wrap:anywhere}\n  #modify-schedule .calendar-assignment strong{color:#a94708;font-size:10px}\n  #modify-schedule #schedule-editor[hidden]{display:none}\n  #modify-schedule .schedule-form small{font-size:10px;color:#687386}
+  #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b;color:#fff}
+  #modify-schedule .calendar-month-grid td.calendar-selected{background:#fff8f2;box-shadow:inset 0 0 0 2px #f36b0b}
+  #modify-schedule .calendar-hint{font-size:13px;color:#687386;margin:4px 0 12px}
+  #modify-schedule .calendar-month-grid td{padding:6px;vertical-align:top}
+  #modify-schedule .calendar-date-add{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:#202938;padding:0 0 5px;text-align:left}
+  #modify-schedule .calendar-add-mark{font-size:10px;color:#b84d08}
+  #modify-schedule .calendar-assignment{display:block;width:100%;text-align:left;border:1px solid #f2c49f;border-left:3px solid #f36b0b;border-radius:6px;background:#fff4eb;color:#202938;padding:5px;margin:3px 0;font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+  #modify-schedule .calendar-assignment strong,#modify-schedule .calendar-assignment span,#modify-schedule .calendar-assignment small{display:block}
+  #modify-schedule .calendar-assignment .calendar-note{margin-top:4px;padding-top:4px;border-top:1px solid #f2c49f;color:#68401f;font-size:11px;white-space:normal;overflow-wrap:anywhere}
+  #modify-schedule .calendar-assignment strong{color:#a94708;font-size:10px}
+  #modify-schedule #schedule-editor[hidden]{display:none}
+  #modify-schedule .schedule-form small{font-size:10px;color:#687386}
   #modify-schedule .schedule-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:7px}
   #modify-schedule .schedule-person{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid #dce1e8;border-radius:8px;background:#fff;color:#202938!important;font-size:13px!important;cursor:pointer}
   #modify-schedule .schedule-person input{width:18px;height:18px;accent-color:#f36b0b}
@@ -105,9 +119,29 @@
   .dashboard-shift-info .dashboard-shift-notes{display:block;padding:6px 8px;margin-top:3px;border-radius:6px;background:#fff4eb;color:#68401f;font-size:12px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
   .dashboard-shift>small{font-size:11px;color:#687386}
   @media(max-width:600px){#modify-schedule .schedule-people{grid-template-columns:1fr}}
-\n  @media(max-width:700px){#modify-schedule .calendar-month-grid{min-width:0;width:100%;table-layout:fixed}#modify-schedule .calendar-month-grid th{height:32px;padding:3px 1px;font-size:0;white-space:nowrap}#modify-schedule .calendar-month-grid th:nth-child(1):after{content:"Mon"}#modify-schedule .calendar-month-grid th:nth-child(2):after{content:"Tue"}#modify-schedule .calendar-month-grid th:nth-child(3):after{content:"Wed"}#modify-schedule .calendar-month-grid th:nth-child(4):after{content:"Thu"}#modify-schedule .calendar-month-grid th:nth-child(5):after{content:"Fri"}#modify-schedule .calendar-month-grid th:nth-child(6):after{content:"Sat"}#modify-schedule .calendar-month-grid th:nth-child(7):after{content:"Sun"}#modify-schedule .calendar-month-grid th:after{font-size:11px;font-weight:700}#modify-schedule .calendar-month-grid td{height:72px;padding:3px 2px;vertical-align:top}#modify-schedule .calendar-month-grid .calendar-day-number{width:24px;height:24px;font-size:12px}\n  #modify-schedule .calendar-date-heading{margin:0 0 10px;padding:10px 12px}\n  #modify-schedule #calendar-month{font-size:18px}\n  #modify-schedule #calendar-selected-day{font-size:12px}#modify-schedule .schedule-scroll{width:100%;max-width:100%;overflow-x:hidden}#modify-schedule .calendar-date-add{justify-content:center;padding:0 0 2px}#modify-schedule .calendar-add-mark{display:none}#modify-schedule .calendar-assignment{padding:3px 2px;margin:2px 0;border-left-width:2px;border-radius:4px;font-size:9px;line-height:1.15}#modify-schedule .calendar-assignment strong{font-size:9px;line-height:1.15}#modify-schedule .calendar-assignment span,#modify-schedule .calendar-assignment small,#modify-schedule .calendar-assignment .calendar-note{display:none}#modify-schedule #schedule-editor{padding:12px}#modify-schedule .schedule-weekdays{grid-template-columns:repeat(2,minmax(0,1fr))}#modify-schedule .schedule-until{align-items:flex-start;flex-direction:column;gap:6px}#modify-schedule .schedule-until input{max-width:none}}
+
+  @media(max-width:700px){#modify-schedule .calendar-month-grid{min-width:0;width:100%;table-layout:fixed}#modify-schedule .calendar-month-grid th{height:32px;padding:3px 1px;font-size:0;white-space:nowrap}#modify-schedule .calendar-month-grid th:nth-child(1):after{content:"Mon"}#modify-schedule .calendar-month-grid th:nth-child(2):after{content:"Tue"}#modify-schedule .calendar-month-grid th:nth-child(3):after{content:"Wed"}#modify-schedule .calendar-month-grid th:nth-child(4):after{content:"Thu"}#modify-schedule .calendar-month-grid th:nth-child(5):after{content:"Fri"}#modify-schedule .calendar-month-grid th:nth-child(6):after{content:"Sat"}#modify-schedule .calendar-month-grid th:nth-child(7):after{content:"Sun"}#modify-schedule .calendar-month-grid th:after{font-size:11px;font-weight:700}#modify-schedule .calendar-month-grid td{height:72px;padding:3px 2px;vertical-align:top}#modify-schedule .calendar-month-grid .calendar-day-number{width:24px;height:24px;font-size:12px}
+  #modify-schedule .calendar-date-heading{margin:0 0 10px;padding:10px 12px}
+  #modify-schedule #calendar-month{font-size:18px}
+  #modify-schedule #calendar-selected-day{font-size:12px}#modify-schedule .schedule-scroll{width:100%;max-width:100%;overflow-x:hidden}#modify-schedule .calendar-date-add{justify-content:center;padding:0 0 2px}#modify-schedule .calendar-add-mark{display:none}#modify-schedule .calendar-assignment{padding:3px 2px;margin:2px 0;border-left-width:2px;border-radius:4px;font-size:9px;line-height:1.15}#modify-schedule .calendar-assignment strong{font-size:9px;line-height:1.15}#modify-schedule .calendar-assignment span,#modify-schedule .calendar-assignment small,#modify-schedule .calendar-assignment .calendar-note{display:none}#modify-schedule #schedule-editor{padding:12px}#modify-schedule .schedule-weekdays{grid-template-columns:repeat(2,minmax(0,1fr))}#modify-schedule .schedule-until{align-items:flex-start;flex-direction:column;gap:6px}#modify-schedule .schedule-until input{max-width:none}}
   @media(max-width:700px){#modify-schedule .schedule-form{grid-template-columns:1fr}#modify-schedule .wide{grid-column:auto}#modify-schedule .schedule-card{padding:12px}#modify-schedule .schedule-toolbar h2{font-size:20px}#modify-schedule .schedule-actions button{padding:9px 10px}}
   @media(max-width:600px){#modify-staff-panel .staffgrid,#modify-job-api .api-grid{grid-template-columns:1fr}#modify-job-api .api-wide{grid-column:auto}#modify-staff-panel{inset:3% 3%}}
+
+  @media(max-width:700px){
+    #modify-schedule .schedule-scroll{overflow:visible;border:0;border-radius:0}
+    #modify-schedule .calendar-month-grid{display:table!important;width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important;border-collapse:collapse!important;border-spacing:0!important}
+    #modify-schedule .calendar-month-grid thead{display:table-header-group!important}
+    #modify-schedule .calendar-month-grid tbody{display:table-row-group!important}
+    #modify-schedule .calendar-month-grid tr{display:table-row!important}
+    #modify-schedule .calendar-month-grid th,#modify-schedule .calendar-month-grid td{display:table-cell!important;width:14.2857%!important;min-width:0!important;max-width:14.2857%!important;box-sizing:border-box!important;border:1px solid #dce1e8!important}
+    #modify-schedule .calendar-month-grid th{height:34px!important;background:#25282d!important;color:#fff!important;text-align:center!important}
+    #modify-schedule .calendar-month-grid td{height:76px!important;padding:4px 2px!important;vertical-align:top!important;background:#fff!important}
+    #modify-schedule .calendar-month-grid td.outside-month{background:#f1f3f6!important;color:#9aa2ad!important}
+    #modify-schedule .calendar-month-grid .calendar-date-add{display:flex!important;justify-content:center!important;align-items:center!important;width:100%!important;min-width:0!important}
+    #modify-schedule .calendar-month-grid .calendar-day-number{display:inline-grid!important;width:24px!important;height:24px!important;font-size:12px!important;font-weight:800!important}
+    #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b!important;color:#fff!important;border-radius:50%!important}
+    #modify-schedule .calendar-month-grid td.calendar-selected{background:#fff2e8!important;box-shadow:inset 0 0 0 2px #f36b0b!important}
+  }
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
   const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
