@@ -107,7 +107,7 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
 
 
   assert.match(app, /Previous/);
-  assert.match(app, /This week/);
+  assert.match(app, /calendar-today/);
 });
 
 test("documents upload to shared D1 storage and can be retrieved across devices", () => {
