@@ -108,6 +108,7 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
   assert.match(app, /schedule-person/);
   assert.match(app, /schedule-weekday/);
   assert.match(app, /sch-repeat-until/);
+  assert.match(app, /repeatDefault\.setDate\(repeatDefault\.getDate\(\)\+27\)/);
   assert.match(app, /Saving .* shift/);
   assert.match(app, /loadDashboardSchedule/);
   assert.match(app, /Upcoming shifts/);
