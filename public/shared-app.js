@@ -217,83 +217,22 @@
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   let workforceScheduleRenderId=0;
   function defaultScheduleAnchor(){const now=new Date();if(now.getDay()===0){const next=new Date(now);next.setDate(next.getDate()+1);return next}return now}
-  async function renderWorkforceSchedule(anchor=defaultScheduleAnchor()){
-    const renderId=++workforceScheduleRenderId,body=$("#pagebody");
-    if(!body)return;if(!currentUser){window.current="Workforce Job Calendar";body.innerHTML="<div class=\"schedule-card\">Loading your company workspace…</div>";return;}
-    const canEdit=["administrator","office_manager","site_manager"].includes(currentUser.role);
-    const monday=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate());
-    monday.setHours(0,0,0,0);monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
-    const days=Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(d.getDate()+i);return d});
-    $("#title").textContent="Workforce Job Calendar";$("#subtitle").textContent="Weekly job allocations for the whole team";$("#crumb").textContent="Workforce Job Calendar";
-    const add=$("#add");if(add)add.style.display="none";
-    body.innerHTML='<div id="modify-schedule"><div class="schedule-card"><div class="schedule-toolbar"><div><h2>Workforce Job Calendar</h2><p>Monday to Sunday · Select a blank day to assign a job, or select an existing job to edit it.</p><p id="schedule-range"></p></div><div class="schedule-actions"><button id="schedule-prev" type="button">← Previous</button><button id="schedule-today" class="primary" type="button">This week</button><button id="schedule-next" type="button">Next →</button><button id="schedule-assign" class="primary" type="button">Assign Job</button></div></div><div id="schedule-message" role="status" aria-live="polite"></div><div class="schedule-scroll" id="schedule-grid">Loading calendar…</div><div id="schedule-editor" class="api-item" hidden></div></div></div>';
-    $("#schedule-range").textContent=dateLabel(days[0])+" – "+dateLabel(days[6]);
-    $("#schedule-prev").onclick=()=>{const d=new Date(monday);d.setDate(d.getDate()-7);renderWorkforceSchedule(d)};
-    $("#schedule-next").onclick=()=>{const d=new Date(monday);d.setDate(d.getDate()+7);renderWorkforceSchedule(d)};
-    $("#schedule-today").onclick=()=>renderWorkforceSchedule(new Date());
-    const grid=$("#schedule-grid"),message=$("#schedule-message");
-    let workers=[],jobs=[],assignments=[];
-    // Render the weekly grid immediately so a slow or unavailable API never
-    // leaves the calendar area blank while data requests are pending.
-    const placeholderHeader='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
-    grid.innerHTML='<table>'+placeholderHeader+'<tbody><tr><th class="worker-col">Team calendar<small>Loading allocations…</small></th>'+days.map(()=>'<td><span class="empty-slot" aria-hidden="true"></span></td>').join("")+'</tr></tbody></table>';
-    try{
-      const results=await Promise.allSettled([api("/api/jobs"),canEdit?api("/api/modules/workforce/records"):Promise.resolve({records:[]}),api("/api/modules/schedule/records")]);
-      const loadErrors=[];
-      if(results[0].status==="fulfilled")jobs=results[0].value.jobs||[];else loadErrors.push("Jobs: "+results[0].reason.message);
-      workers=canEdit?(results[1].status==="fulfilled"?(results[1].value.records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status))):[]):[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
-      if(canEdit&&results[1].status==="rejected")loadErrors.push("Workforce: "+results[1].reason.message);
-      if(canEdit&&!workers.length){try{const accountData=await api("/api/auth/users");workers=(accountData.users||[]).filter(u=>u.active!==0).map(u=>({id:String(u.id),name:u.name||"Team member",role:u.role||""}))}catch(e){loadErrors.push("Staff list: "+e.message)}}
-      if(results[2].status==="fulfilled")assignments=(results[2].value.records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||""),date:String(x.record?.date||"")}));
-      else loadErrors.push("Existing allocations: "+results[2].reason.message);
-      // Never hide a saved allocation just because the Workforce register is temporarily
-      // empty or a worker has since been renamed/removed. Build visible calendar rows
-      // from the saved allocation itself as a final fallback.
-      const knownWorkerIds=new Set(workers.map(w=>String(w.id)));
-      for(const allocation of assignments){
-        if(!allocation.workerId||knownWorkerIds.has(allocation.workerId))continue;
-        workers.push({id:allocation.workerId,name:allocation.workerName||"Unlisted worker",role:allocation.workerRole||"From saved allocation",status:"Employed"});
-        knownWorkerIds.add(allocation.workerId);
-      }
-      if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
-      if(loadErrors.length)message.textContent="Some calendar data could not load. "+loadErrors.join(" · ");
-    }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected){message.textContent="Calendar data is temporarily unavailable: "+e.message+" The weekly calendar is still displayed."; }return}
-    const header='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
-    const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{
-      const key=dateKey(d),items=assignments.filter(a=>(a.workerId===w.id||(!canEdit&&a.workerName===w.name))&&a.date===key);
-      const html=items.length?items.map(a=>'<button type="button" class="shift" data-edit-shift="'+esc(a.id)+'"><strong>'+esc(a.jobNumber||"Job")+'</strong>'+esc(a.jobName||"Project not set")+(a.startTime?' · '+esc(a.startTime):"")+'</button>').join(""):(canEdit?'<button type="button" class="empty-slot" aria-label="Assign a job to '+esc(w.name)+' on '+esc(dateLabel(d))+'" data-new-shift="'+esc(w.id)+'" data-date="'+key+'"></button>':'—');
-      return '<td data-day="'+esc(dateLabel(d))+'">'+html+'</td>';
-    }).join("")+'</tr>').join("");
-    grid.innerHTML='<table>'+header+'<tbody>'+(rows||'<tr><td colspan="8">No active workers found in the Workforce register.</td></tr>')+'</tbody></table>';
-    const editor=$("#schedule-editor");
-    function openEditor(existing={},workerId="",date=dateKey(new Date())){
-      if(!canEdit)return;
-      const chosen=String(existing.workerId||workerId||"");
-      editor.hidden=false;
-      editor.innerHTML='<h3>'+(existing.id?'Edit job allocation':'Assign a job')+'</h3><div class="schedule-form"><label>Worker<select id="sch-worker">'+workers.map(w=>'<option value="'+esc(w.id)+'" '+(w.id===chosen?'selected':'')+'>'+esc(w.name)+'</option>').join("")+'</select></label><label>Job / project<select id="sch-job"><option value="">Choose a job</option>'+jobs.map(j=>'<option value="'+esc(j.job_number)+'" '+(String(j.job_number)===String(existing.jobNumber||"")?'selected':'')+'>'+esc(j.job_number+" — "+j.project_name)+'</option>').join("")+'</select></label><label>Date<input id="sch-date" type="date" value="'+esc(existing.date||date)+'" required></label><label>Start time<input id="sch-start" type="time" value="'+esc(existing.startTime||"")+'"></label><label>Finish time<input id="sch-end" type="time" value="'+esc(existing.endTime||"")+'"></label><label class="wide">Notes<textarea id="sch-notes" rows="2">'+esc(existing.notes||"")+'</textarea></label></div><div class="api-actions"><button type="button" id="sch-cancel">Cancel</button>'+(existing.id?'<button type="button" id="sch-delete">Delete allocation</button>':"")+'<button type="button" id="sch-save">Save allocation</button></div>';
-      editor.scrollIntoView({behavior:"smooth",block:"start"});
-      $("#sch-job").focus({preventScroll:true});
-      $("#sch-cancel").onclick=()=>editor.hidden=true;
-      $("#sch-save").onclick=async()=>{
-        const worker=workers.find(w=>w.id===$("#sch-worker").value),job=jobs.find(j=>String(j.job_number)===$("#sch-job").value),dateValue=$("#sch-date").value,startTime=$("#sch-start").value,endTime=$("#sch-end").value;
-        if(!worker||!job||!dateValue){message.textContent="Please choose a worker, job and date.";return}
-        if(startTime&&endTime&&endTime<=startTime){message.textContent="Finish time must be later than start time.";return}
-        const record={workerId:worker.id,workerName:worker.name,workerRole:worker.role,jobNumber:String(job.job_number),jobName:job.project_name,date:dateValue,startTime,endTime,notes:$("#sch-notes").value};
-        const button=$("#sch-save");button.disabled=true;button.textContent="Saving…";
-        try{await api("/api/modules/schedule/records",{method:"POST",body:JSON.stringify({id:existing.id||crypto.randomUUID(),jobNumber:String(job.job_number),record})});await renderWorkforceSchedule(new Date(dateValue+"T12:00:00"))}
-        catch(e){message.textContent="Could not save allocation: "+e.message;button.disabled=false;button.textContent="Save allocation"}
-      };
-      if(existing.id)$("#sch-delete").onclick=async()=>{
-        if(!confirm("Delete this calendar allocation?"))return;
-        try{await api("/api/modules/schedule/records/"+encodeURIComponent(existing.id),{method:"DELETE"});await renderWorkforceSchedule(monday)}
-        catch(e){message.textContent="Could not delete allocation: "+e.message}
-      };
-    }
-    $("#schedule-assign").onclick=()=>{if(!canEdit){message.textContent="Your account can view the calendar but cannot assign jobs.";return}if(!workers.length){message.textContent="No workers are available to assign. Add staff in the Workforce register first.";return}if(!jobs.length){message.textContent="No jobs are available. Add a job in Jobs & Sites first.";return}openEditor({},workers[0].id,dateKey(new Date()))};
-    grid.querySelectorAll("[data-new-shift]").forEach(b=>b.onclick=()=>openEditor({},b.dataset.newShift,b.dataset.date));
-    grid.querySelectorAll("[data-edit-shift]").forEach(b=>b.onclick=()=>{const a=assignments.find(x=>x.id===b.dataset.editShift);if(a)openEditor(a)});
-  }
-  window.renderWorkforceSchedule=renderWorkforceSchedule;
+  async function renderWorkforceSchedule(anchor=new Date()){
+ const body=$("#pagebody");if(!body)return;
+ const month=new Date(anchor.getFullYear(),anchor.getMonth(),1),y=month.getFullYear(),m=month.getMonth();
+ const first=new Date(y,m,1),startDay=new Date(y,m,1-((first.getDay()+6)%7)),today=dateKey(new Date());
+ const label=month.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+ $("#title").textContent="Calendar";$("#subtitle").textContent="Monthly calendar";$("#crumb").textContent="Calendar";
+ const add=$("#add");if(add)add.style.display="none";
+ body.innerHTML='<section class="schedule-card" id="modify-schedule"><div class="schedule-toolbar"><div><h2>Calendar</h2><p id="calendar-month"></p></div><div class="schedule-actions"><button id="calendar-prev" type="button">← Previous</button><button id="calendar-today" class="primary" type="button">Today</button><button id="calendar-next" type="button">Next →</button></div></div><div class="schedule-scroll"><table class="calendar-month-grid"><thead><tr>'+["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody id="calendar-days"></tbody></table></div></section>';
+ $("#calendar-month").textContent=label;
+ $("#calendar-prev").onclick=()=>renderWorkforceSchedule(new Date(y,m-1,1));
+ $("#calendar-next").onclick=()=>renderWorkforceSchedule(new Date(y,m+1,1));
+ $("#calendar-today").onclick=()=>renderWorkforceSchedule(new Date());
+ const cells=Array.from({length:42},(_,i)=>{const d=new Date(startDay);d.setDate(startDay.getDate()+i);return d});
+ $("#calendar-days").innerHTML=Array.from({length:6},(_,w)=>'<tr>'+cells.slice(w*7,w*7+7).map(d=>{const k=dateKey(d);return '<td class="calendar-day'+(d.getMonth()!==m?' outside-month':'')+(k===today?' calendar-today':'')+'"><span class="calendar-day-number">'+d.getDate()+'</span></td>'}).join("")+'</tr>').join("");
+}
+window.renderWorkforceSchedule=renderWorkforceSchedule;
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
   async function renderJobUpdates(jobFilter=null){
     const body=$("#pagebody");if(!body)return;
