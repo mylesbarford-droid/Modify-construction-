@@ -53,14 +53,14 @@ async function getSession(request, env) {
   const token = (request.headers.get("Cookie") || "").split(";").map(x => x.trim()).find(x => x.startsWith("modify_session="))?.slice("modify_session=".length);
   if (!token) return null;
   const row = await env.DB.prepare("SELECT s.id, s.user_id, s.expires_at, u.full_name, u.staff_code, u.role, u.active FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?").bind(await digest(token)).first();
-  if (!row || row.expires_at < Math.floor(Date.now() / 1000) || !row.active) return null;
+  if (!row || row.expires_at < Math.floor(Date.now() / 1000) || !row.active || row.staff_code === "MODIFY_SHARED") return null;
   return row;
 }
 const PERMISSIONS = {
   administrator: ["*"],
   office_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "money:read", "money:write", "documents:read", "documents:write", "suppliers:read", "suppliers:write", "workforce:read", "workforce:write", "schedule:read", "schedule:write", "users:read"],
   site_manager: ["job_updates:read", "job_updates:create", "job_updates:review", "dashboard:read", "jobs:read", "jobs:write", "workforce:read", "workforce:write", "schedule:read", "schedule:write", "plant:read", "plant:write", "vehicles:read", "vehicles:write", "safety:read", "safety:write", "documents:read"],
-  employee: ["job_updates:read", "job_updates:create", "dashboard:read", "jobs:assigned:read", "schedule:read", "timesheets:read", "timesheets:write", "daily_reports:read", "daily_reports:write"]
+  employee: ["job_updates:read", "dashboard:read", "jobs:read", "money:read", "documents:read", "suppliers:read", "workforce:read", "schedule:read", "plant:read", "vehicles:read", "safety:read", "timesheets:read", "daily_reports:read"]
 };
 function can(role, permission) {
   const grants = PERMISSIONS[role] || [];
@@ -73,28 +73,52 @@ async function audit(env, session, action, detail = "") {
 async function handleApi(request, env) {
   if (!env.DB) return json({ error: "The shared database is not configured yet." }, 503);
   const url = new URL(request.url);
-  if (request.method === "POST" && url.pathname === "/api/auth/login") {
-    // Owner-requested open access: no password or PIN is required.
-    // WARNING: anyone on the public internet can access and change company data.
-    let user = await env.DB.prepare("SELECT id, full_name, staff_code, role, active FROM users WHERE staff_code = 'MODIFY_SHARED'").first();
-    const now = Math.floor(Date.now() / 1000);
-    if (!user) {
-      // Passwordless shared access does not use a PIN. Keep a random placeholder
-      // for the legacy NOT NULL columns without expensive PBKDF2 on first login.
-      const id = randomToken(16), salt = randomToken(16), unusedPinHash = randomToken(32);
-      await env.DB.prepare("INSERT INTO users (id, full_name, staff_code, role, pin_salt, pin_hash, active, created_at) VALUES (?, 'MODIFY Team', 'MODIFY_SHARED', 'administrator', ?, ?, 1, ?)")
-        .bind(id, salt, unusedPinHash, now).run();
-      user = { id, full_name: "MODIFY Team", staff_code: "MODIFY_SHARED", role: "administrator", active: 1 };
-    } else {
-      await env.DB.prepare("UPDATE users SET role='administrator', active=1 WHERE id=?").bind(user.id).run();
-      user.role = "administrator"; user.active = 1;
+  if (request.method === "GET" && url.pathname === "/api/auth/roster") {
+    const rows = await env.DB.prepare("SELECT payload FROM module_records WHERE module_name='workforce' ORDER BY updated_at DESC LIMIT 1000").all();
+    const names = new Set(["Jay Wilson", "Dave Hawes"]);
+    for (const row of rows.results || []) {
+      try {
+        const p = JSON.parse(row.payload);
+        const name = String(p["Full name"] || p.fullName || p.name || "").trim();
+        if (name && name.length <= 100) names.add(name);
+      } catch {}
     }
-    const token = randomToken();
-    const expires = now + SESSION_TTL_SECONDS;
-    await env.DB.prepare("INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(randomToken(16), user.id, await digest(token), expires, now).run();
-    await audit(env, { user_id: user.id }, "shared_login", "Shared MODIFY access");
-    return json({ user: { id: user.id, name: "MODIFY Team", staffCode: "MODIFY_SHARED", role: "administrator", permissions: PERMISSIONS.administrator } }, 200, { "set-cookie": cookie("modify_session", token, SESSION_TTL_SECONDS) });
+    return json({ names: [...names].sort((a,b)=>a.localeCompare(b)) });
+  }
+  if (request.method === "POST" && url.pathname === "/api/auth/login") {
+    const input = await body(request);
+    const name = String(input?.name || "").trim().replace(/\\s+/g," ");
+    if (!name || name.length > 100) return json({error:"Choose your name to continue."},400);
+    const normalized = name.toLocaleLowerCase("en-GB");
+    const isJay = normalized === "jay wilson", isDave = normalized === "dave hawes";
+    let role = "employee", staffCode = "VIEWER_" + (await digest(normalized)).slice(0,32);
+    let salt = randomToken(16), hash = randomToken(32);
+    if (isJay || isDave) {
+      if (!await rateLimit(env, clientKey(request)+":manager:"+normalized, 6)) return json({error:"Too many PIN attempts. Try again in 15 minutes."},429);
+      const manager = isJay
+        ? {salt:"bbc5583a5003aff96bf22c21f918f7ee",hash:"72f938da0bc05b459f791734b5b0ece3f9d48aa5f8740bfc8efc14d97ecdb0a2",pin:"482916"}
+        : {salt:"77c5d1b0549d0e09dc0c5543e1b9cc6a",hash:"03ade0b92277ff098c172162f9a00ecc299acab7b195c6e6ee7995f9e623b936",pin:"731405"};
+      if (typeof input.pin !== "string" || !safeEqual(await pinHash(input.pin,manager.salt),manager.hash)) return json({error:"That PIN is not correct."},401);
+      role = "administrator"; staffCode = isJay ? "JAY_WILSON" : "DAVE_HAWES"; salt=manager.salt; hash=manager.hash;
+    } else {
+      const rows = await env.DB.prepare("SELECT payload FROM module_records WHERE module_name='workforce'").all();
+      const valid = (rows.results||[]).some(row => { try { const p=JSON.parse(row.payload); return String(p["Full name"]||p.fullName||p.name||"").trim().toLocaleLowerCase("en-GB")===normalized; } catch { return false; }});
+      if (!valid) return json({error:"That name is not in the Workforce list yet. Ask a manager to add you."},404);
+    }
+    let user = await env.DB.prepare("SELECT id,full_name,staff_code,role,active FROM users WHERE staff_code=?").bind(staffCode).first();
+    const now=Math.floor(Date.now()/1000);
+    if (!user) {
+      const id=randomToken(16);
+      await env.DB.prepare("INSERT INTO users (id,full_name,staff_code,role,pin_salt,pin_hash,active,created_at) VALUES (?,?,?,?,?,?,1,?)").bind(id,isJay?"Jay Wilson":isDave?"Dave Hawes":name,staffCode,role,salt,hash,now).run();
+      user={id,full_name:name,staff_code:staffCode,role,active:1};
+    } else {
+      await env.DB.prepare("UPDATE users SET full_name=?,role=?,active=1 WHERE id=?").bind(isJay?"Jay Wilson":isDave?"Dave Hawes":name,role,user.id).run();
+      user.full_name=isJay?"Jay Wilson":isDave?"Dave Hawes":name;user.role=role;user.active=1;
+    }
+    const token=randomToken(),expires=now+SESSION_TTL_SECONDS;
+    await env.DB.prepare("INSERT INTO sessions (id,user_id,token_hash,expires_at,created_at) VALUES (?,?,?,?,?)").bind(randomToken(16),user.id,await digest(token),expires,now).run();
+    await audit(env,{user_id:user.id},"named_login",role+":"+user.full_name);
+    return json({user:{id:user.id,name:user.full_name,staffCode:user.staff_code,role:user.role,permissions:PERMISSIONS[user.role]||[]}},200,{"set-cookie":cookie("modify_session",token,SESSION_TTL_SECONDS)});
   }
   if (request.method === "GET" && url.pathname === "/api/auth/me") {
     const session = await getSession(request, env);
@@ -199,7 +223,7 @@ async function handleApi(request, env) {
     return json({ok:true});
   }
   if (url.pathname === "/api/job-assignments" && request.method === "GET") {
-    if (!["administrator","office_manager","site_manager"].includes(session.role)) return json({error:"Not authorised."},403);
+    if (!["administrator","office_manager","site_manager","employee"].includes(session.role)) return json({error:"Not authorised."},403);
     const rows = await env.DB.prepare("SELECT a.user_id,a.job_number,u.full_name,u.staff_code FROM job_assignments a JOIN users u ON u.id=a.user_id ORDER BY a.job_number,u.full_name").all();
     return json({assignments:rows.results||[]});
   }
@@ -234,11 +258,7 @@ async function handleApi(request, env) {
   if (url.pathname === "/api/jobs" && request.method === "GET") {
     if (!can(session.role, "jobs:read") && session.role !== "employee") return json({error:"Not authorised."},403);
     let rows;
-    if (session.role === "employee") {
-      rows = await env.DB.prepare("SELECT j.* FROM jobs j JOIN job_assignments a ON a.job_number=j.job_number WHERE a.user_id=? ORDER BY j.updated_at DESC").bind(session.user_id).all();
-    } else {
-      rows = await env.DB.prepare("SELECT * FROM jobs ORDER BY updated_at DESC").all();
-    }
+    rows = await env.DB.prepare("SELECT * FROM jobs ORDER BY updated_at DESC").all();
     return json({jobs:rows.results||[]});
   }
   if (url.pathname === "/api/jobs" && request.method === "POST") {
@@ -273,10 +293,6 @@ async function handleApi(request, env) {
   if(jobMatch&&request.method==="GET"){
     if(!can(session.role,"jobs:read")&&session.role!=="employee")return json({error:"Not authorised."},403);
     const jobNumber=decodeURIComponent(jobMatch[1]);
-    if(session.role==="employee"){
-      const assigned=await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id,jobNumber).first();
-      if(!assigned)return json({error:"Not authorised."},403);
-    }
     const job=await env.DB.prepare("SELECT * FROM jobs WHERE job_number=?").bind(jobNumber).first();
     if(!job)return json({error:"Job not found."},404);
     const updates=await env.DB.prepare("SELECT j.*,u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by WHERE j.job_number=? ORDER BY j.created_at DESC LIMIT 200").bind(jobNumber).all();
@@ -301,11 +317,7 @@ async function handleApi(request, env) {
     if (request.method === "GET") {
       if (!can(session.role, permission+":read")) return json({error:"You do not have permission to view this register."},403);
       let rows;
-      if (session.role === "employee") {
-        rows = await env.DB.prepare("SELECT record_id,job_number,payload,created_at,updated_at FROM module_records WHERE module_name=? AND job_number IN (SELECT job_number FROM job_assignments WHERE user_id=?) ORDER BY updated_at DESC LIMIT 1000").bind(moduleName,session.user_id).all();
-      } else {
-        rows = await env.DB.prepare("SELECT record_id,job_number,payload,created_at,updated_at FROM module_records WHERE module_name=? ORDER BY updated_at DESC LIMIT 2000").bind(moduleName).all();
-      }
+      rows = await env.DB.prepare("SELECT record_id,job_number,payload,created_at,updated_at FROM module_records WHERE module_name=? ORDER BY updated_at DESC LIMIT 2000").bind(moduleName).all();
       return json({records:(rows.results||[]).map(row=>({id:row.record_id,jobNumber:row.job_number,record:JSON.parse(row.payload),createdAt:row.created_at,updatedAt:row.updated_at}))});
     }
     if (request.method === "POST" && !recordId) {
@@ -349,11 +361,7 @@ async function handleApi(request, env) {
   if (url.pathname === "/api/job-updates" && request.method === "GET") {
     if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." }, 403);
     let result;
-    if (session.role === "employee") {
-      result = await env.DB.prepare("SELECT j.*, u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by WHERE EXISTS (SELECT 1 FROM job_assignments a WHERE a.user_id=? AND a.job_number=j.job_number) ORDER BY j.created_at DESC LIMIT 200").bind(session.user_id).all();
-    } else {
-      result = await env.DB.prepare("SELECT j.*, u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by ORDER BY j.created_at DESC LIMIT 500").all();
-    }
+    result = await env.DB.prepare("SELECT j.*, u.full_name AS creator_name FROM job_updates j JOIN users u ON u.id=j.created_by ORDER BY j.created_at DESC LIMIT 500").all();
     const ids = (result.results || []).map(x => x.id);
     const photos = [];
     for (const id of ids) {
