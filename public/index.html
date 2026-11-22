@@ -733,6 +733,7 @@ renderV2();
 (function(){
  function go(page){
   if(!page)return;
+  try{sessionStorage.setItem("modifyLastWorkspacePage",page)}catch{}
   try{
    if(typeof current!=="undefined")current=page;
    document.querySelectorAll("#nav button[data-page]").forEach(function(b){b.classList.toggle("active",b.dataset.page===page)});
