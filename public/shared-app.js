@@ -125,6 +125,21 @@
         }
       }
       if(importedLegacyJobs){const refreshed=await api("/api/jobs");sharedJobs=refreshed.jobs||[];}
+      // Keep the dashboard's legacy Jobs & Sites data in sync with the central jobs table.
+      // The dashboard reads modifyRecordsV2, while newer job pages read /api/jobs directly.
+      state["Jobs & Sites"]=sharedJobs.map(j=>({
+        id:String(j.job_number||""),
+        "Job number":String(j.job_number||""),
+        "Job / project name":String(j.project_name||""),
+        Client:String(j.client||""),
+        "Site address":String(j.site_address||""),
+        "Job type":String(j.job_type||""),
+        "Start date":String(j.start_date||""),
+        "Expected finish date":String(j.expected_finish_date||""),
+        "Project manager":String(j.project_manager||""),
+        Status:String(j.status||""),
+        Notes:String(j.notes||"")
+      }));
       const permitted={
         administrator:Object.keys(moduleMap),
         office_manager:["Money","Documents","Suppliers & Materials","Job Materials","Workforce"],
