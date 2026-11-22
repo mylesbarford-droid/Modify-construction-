@@ -10,7 +10,11 @@
   #modify-auth-cover label{display:block;font-size:12px;margin:13px 0 5px;color:#e0c477}
   #modify-auth-cover input,#modify-staff-panel input,#modify-staff-panel select,#modify-job-api select,#modify-job-api textarea{width:100%;padding:11px;border:1px solid #48443a;border-radius:8px;background:#111317;color:#f4f1e8}
   #modify-auth-cover button,#modify-staff-panel button,#modify-job-api button{background:#c6a34a;color:#090a0c;border:0;border-radius:8px;padding:11px 15px;font-weight:750;cursor:pointer}
-  #modify-auth-cover button{width:100%;margin-top:18px}#modify-auth-error{color:#ffaaaa;min-height:20px}
+  #modify-auth-cover button{width:100%;margin-top:10px}#modify-auth-error{color:#ffaaaa;min-height:20px}
+  #modify-auth-cover .login-name-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:18px 0}
+  #modify-auth-cover .login-name{min-height:48px;background:#29251c;color:#f4f1e8;border:1px solid #80652d;border-radius:9px;padding:10px;font-weight:700}
+  #modify-auth-cover #modify-pin-area{margin-top:12px}
+  #modify-auth-cover #modify-pin-area input{margin:6px 0}
   #modify-account{display:flex;gap:8px;align-items:center;font-size:12px;color:#e0c477}
   #modify-account button{padding:7px 10px;background:#29251c;color:#e0c477;border:1px solid #80652d;border-radius:7px}
   #modify-staff-panel{position:fixed;z-index:9998;inset:8% 5%;overflow:auto;background:#17191d;color:#f4f1e8;border:1px solid #c6a34a;border-radius:14px;padding:22px;box-shadow:0 20px 80px #000b}
@@ -160,10 +164,10 @@
   @media(max-width:700px){#modify-schedule .calendar-month-grid th{color:transparent!important;font-size:0!important}#modify-schedule .calendar-month-grid th:after{color:#f7f8fa!important;font-size:11px!important;visibility:visible!important}}
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
-  const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
+  const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Choose your name to open the company app.</p><div id="modify-login-names"></div><div id="modify-auth-error" role="alert"></div></div>';
   document.body.appendChild(cover);
   const api=async(path,opts={})=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);try{const r=await fetch(path,{credentials:"same-origin",...opts,signal:controller.signal,headers:{...(opts.body instanceof FormData?{}:{"content-type":"application/json"}),...(opts.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Request failed ("+r.status+")");return data}catch(e){if(e.name==="AbortError")throw new Error("Request timed out while loading "+path+". Please try again.");throw e}finally{clearTimeout(timer)}};
-  function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>Open company access · no password</span>'}
+  function accountBar(){let bar=$("#modify-account");if(!bar){bar=document.createElement("div");bar.id="modify-account";const top=$(".top");if(top)top.appendChild(bar)}if(bar)bar.innerHTML='<span>'+esc(currentUser?.name||"Signed in")+' · '+(currentUser?.role==="administrator"?"Editor":"View only")+'</span><button type="button" id="modify-signout">Sign out</button>';const out=$("#modify-signout");if(out)out.onclick=async()=>{try{await api("/api/auth/logout",{method:"POST",body:"{}"})}catch{}location.reload()}}
   const moduleMap={
     "Money":"money","Plant & Equipment":"plant","Vehicles":"vehicles","Workforce":"workforce",
     "Health & Safety":"safety",
@@ -308,7 +312,25 @@
     }
   };
   let sharedJobs=[];
-  async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(!d?.user)d=await api("/api/auth/login",{method:"POST",body:"{}"});currentUser=d.user;if(!currentUser)throw new Error("Could not open company workspace");cover.remove();accountBar();await syncOperationalRegisters();if($("#crumb")?.textContent==="Dashboard")loadDashboardSchedule();if(window.current==="Workforce Job Calendar")renderWorkforceSchedule()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
+  async function enterWorkspace(user){currentUser=user;cover.remove();accountBar();await syncOperationalRegisters();if($("#crumb")?.textContent==="Dashboard")loadDashboardSchedule();if(window.current==="Workforce Job Calendar")renderWorkforceSchedule()}
+  async function showNameLogin(){
+    cover.style.display="grid";const host=$("#modify-login-names"),error=$("#modify-auth-error");
+    try{
+      const data=await api("/api/auth/roster"),names=data.names||[];
+      host.innerHTML='<div class="login-name-grid">'+names.map(n=>'<button type="button" class="login-name" data-person="'+esc(n)+'">'+esc(n)+'</button>').join("")+'</div><div id="modify-pin-area"></div>';
+      host.querySelectorAll(".login-name").forEach(btn=>btn.onclick=async()=>{
+        const name=btn.dataset.person,isManager=["jay wilson","dave hawes"].includes(name.toLowerCase()),pinArea=$("#modify-pin-area");
+        error.textContent="";
+        if(!isManager){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name})});await enterWorkspace(d.user)}catch(e){error.textContent=e.message}}
+        else{
+          pinArea.innerHTML='<label for="modify-manager-pin">Enter your 6-digit PIN</label><input id="modify-manager-pin" inputmode="numeric" autocomplete="current-password" maxlength="6" type="password" placeholder="6-digit PIN"><button type="button" id="modify-manager-enter">Continue</button>';
+          $("#modify-manager-enter").onclick=async()=>{try{const pin=$("#modify-manager-pin").value;const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name,pin})});await enterWorkspace(d.user)}catch(e){error.textContent=e.message}};
+          $("#modify-manager-pin").focus();
+        }
+      });
+    }catch(e){error.textContent=e.message||"Could not load staff names. Refresh to try again."}
+  }
+  async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(d?.user){await enterWorkspace(d.user);return}await showNameLogin()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   let workforceScheduleRenderId=0;
   async function renderWorkerMyWork(){
