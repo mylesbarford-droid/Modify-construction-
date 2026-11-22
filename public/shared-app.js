@@ -243,7 +243,7 @@
         administrator:Object.keys(moduleMap),
         office_manager:["Money","Documents","Suppliers & Materials","Job Materials","Workforce"],
         site_manager:["Plant & Equipment","Vehicles","Workforce","Health & Safety","Documents","Specialist Tooling"],
-        employee:["Timesheets","Daily Reports"]
+        employee:Object.keys(moduleMap)
       }[currentUser.role]||[];
       for(const page of permitted){
         const module=moduleMap[page],local=Array.isArray(state[page])?state[page]:[];
@@ -259,7 +259,7 @@
           remoteIds.add(id);
           byId.set(id,{...x.record,id:x.id});
         });
-        for(const rec of local){
+        for(const rec of (currentUser.role==="employee"?[]:local)){
           if(!rec.id)rec.id=crypto.randomUUID();
           const id=String(rec.id);
           if(remoteIds.has(id))continue;
