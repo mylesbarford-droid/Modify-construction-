@@ -98,13 +98,14 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
   assert.match(worker, /schedule:write/);
   assert.match(worker, /schedule: "schedule"/);
   assert.match(app, /async function renderWorkforceSchedule/);
-  assert.match(app, /Weekly job allocations for the whole team/);
-  assert.match(app, /api\/modules\/schedule\/records/);
-  assert.match(app, /Save allocation/);
-  assert.match(app, /Delete allocation/);
-  assert.match(app, /!canEdit&&a.workerName===w.name/);
-  assert.match(app, /data-new-shift/);
-  assert.match(app, /data-edit-shift/);
+  assert.match(app, /class="calendar-month-grid"/);
+  assert.match(app, /Monthly calendar/);
+  assert.doesNotMatch(app, /api\/modules\/schedule\/records/);
+  assert.doesNotMatch(app, /Save allocation/);
+  assert.doesNotMatch(app, /Delete allocation/);
+
+
+
   assert.match(app, /Previous/);
   assert.match(app, /This week/);
 });
