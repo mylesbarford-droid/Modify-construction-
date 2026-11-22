@@ -217,6 +217,10 @@
     $("#schedule-today").onclick=()=>renderWorkforceSchedule(new Date());
     const grid=$("#schedule-grid"),message=$("#schedule-message");
     let workers=[],jobs=[],assignments=[];
+    // Render the weekly grid immediately so a slow or unavailable API never
+    // leaves the calendar area blank while data requests are pending.
+    const placeholderHeader='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
+    grid.innerHTML='<table>'+placeholderHeader+'<tbody><tr><th class="worker-col">Team calendar<small>Loading allocations…</small></th>'+days.map(()=>'<td><span class="empty-slot" aria-hidden="true"></span></td>').join("")+'</tr></tbody></table>';
     try{
       const results=await Promise.allSettled([api("/api/jobs"),canEdit?api("/api/modules/workforce/records"):Promise.resolve({records:[]}),api("/api/modules/schedule/records")]);
       const loadErrors=[];
@@ -228,7 +232,7 @@
       else loadErrors.push("Existing allocations: "+results[2].reason.message);
       if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
       if(loadErrors.length)message.textContent="Some calendar data could not load. "+loadErrors.join(" · ");
-    }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected)grid.textContent="The calendar could not load: "+e.message;return}
+    }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected){message.textContent="Calendar data is temporarily unavailable: "+e.message+" The weekly calendar is still displayed."; }return}
     const header='<thead><tr><th class="worker-col">Worker</th>'+days.map(d=>'<th class="day-col">'+dateLabel(d)+'</th>').join("")+'</tr></thead>';
     const rows=workers.map(w=>'<tr><th class="worker-col">'+esc(w.name)+(w.role?'<br><small>'+esc(w.role)+'</small>':"")+'</th>'+days.map(d=>{
       const key=dateKey(d),items=assignments.filter(a=>(a.workerId===w.id||(!canEdit&&a.workerName===w.name))&&a.date===key);
