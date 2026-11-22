@@ -431,10 +431,6 @@ async function handleApi(request, env) {
     if (!can(session.role, "job_updates:read")) return json({ error: "Not authorised." },403);
     const photo = await env.DB.prepare("SELECT p.object_key,p.content_type,p.file_name,j.job_number,j.created_by FROM job_update_photos p JOIN job_updates j ON j.id=p.update_id WHERE p.id=? AND p.update_id=?").bind(getPhoto[2],getPhoto[1]).first();
     if (!photo) return json({ error: "Photo not found." },404);
-    if (session.role === "employee") {
-      const assigned = await env.DB.prepare("SELECT 1 AS ok FROM job_assignments WHERE user_id=? AND job_number=?").bind(session.user_id,photo.job_number).first();
-      if (!assigned) return json({ error: "Not authorised." },403);
-    }
     const stored = await env.DB.prepare("SELECT data_base64 FROM shared_files WHERE id=?").bind(photo.object_key).first();
     if (!stored) return json({ error: "Photo file not found." },404);
     const binary = atob(stored.data_base64), bytes = new Uint8Array(binary.length);
