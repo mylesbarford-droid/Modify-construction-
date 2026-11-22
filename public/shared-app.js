@@ -216,7 +216,8 @@
   async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(!d?.user)d=await api("/api/auth/login",{method:"POST",body:"{}"});currentUser=d.user;if(!currentUser)throw new Error("Could not open company workspace");cover.remove();accountBar();if(window.current==="Workforce Job Calendar")renderWorkforceSchedule();await syncOperationalRegisters()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   let workforceScheduleRenderId=0;
-  async function renderWorkforceSchedule(anchor=new Date()){
+  function defaultScheduleAnchor(){const now=new Date();if(now.getDay()===0){const next=new Date(now);next.setDate(next.getDate()+1);return next}return now}
+  async function renderWorkforceSchedule(anchor=defaultScheduleAnchor()){
     const renderId=++workforceScheduleRenderId,body=$("#pagebody");
     if(!body)return;if(!currentUser){window.current="Workforce Job Calendar";body.innerHTML="<div class=\"schedule-card\">Loading your company workspace…</div>";return;}
     const canEdit=["administrator","office_manager","site_manager"].includes(currentUser.role);
