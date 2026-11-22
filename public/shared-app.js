@@ -247,9 +247,10 @@
  }
  $("#sch-cancel").onclick=()=>{editor.hidden=true};
  try{
-  const [scheduleData,workforceData]=await Promise.all([api("/api/modules/schedule/records"),api("/api/modules/workforce/records")]);
+  const scheduleData=await api("/api/modules/schedule/records");
   records=(scheduleData.records||[]).filter(x=>x.record&&x.record.type==="calendar_assignment");
-  people=(workforceData.records||[]).map(x=>x.record||{}).filter(p=>p["Full name"]||p.fullName||p.name).map((p,i)=>({id:String(p.id||p["Staff code"]||p.staffCode||i),name:String(p["Full name"]||p.fullName||p.name),role:String(p["Job role"]||p["Job role / trade"]||"")})).sort((a,b)=>a.name.localeCompare(b.name));
+  const workforceData=currentUser?.role==="employee"?{records:[]} : await api("/api/modules/workforce/records");
+  people=(workforceData.records||[]).map(x=>({row:x,record:x.record||{}})).filter(x=>x.record["Full name"]||x.record.fullName||x.record.name).map((x,i)=>({id:String(x.row.id||x.record.id||x.record["Staff code"]||x.record.staffCode||i),name:String(x.record["Full name"]||x.record.fullName||x.record.name),role:String(x.record["Job role"]||x.record["Job role / trade"]||"")})).sort((a,b)=>a.name.localeCompare(b.name));
   peopleInput.innerHTML=people.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name+(p.role?" — "+p.role:""))+'</option>').join("");
  }catch(e){message.textContent="Could not load staff or assignments: "+e.message}
  const cells=Array.from({length:42},(_,i)=>{const d=new Date(startDay);d.setDate(startDay.getDate()+i);return d});
