@@ -61,6 +61,12 @@
   #modify-schedule #schedule-editor button{border:1px solid #dce1e8;background:#fff;color:#20242b;border-radius:8px;padding:9px 13px;cursor:pointer}
   #modify-schedule #schedule-editor #sch-save{background:#f36b0b;border-color:#f36b0b;color:#fff}
   #modify-schedule #schedule-message{color:#b84d08;font-size:13px;margin:8px 0}
+  #modify-schedule .calendar-month-grid{min-width:700px;table-layout:fixed}
+  #modify-schedule .calendar-month-grid th{height:42px}
+  #modify-schedule .calendar-month-grid td{height:112px;background:#fff;position:relative}
+  #modify-schedule .calendar-month-grid td.outside-month{background:#f5f6f8;color:#a4aab4}
+  #modify-schedule .calendar-month-grid .calendar-day-number{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;font-weight:650}
+  #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b;color:#fff}
   @media(max-width:700px){#modify-schedule .schedule-form{grid-template-columns:1fr}#modify-schedule .wide{grid-column:auto}#modify-schedule .schedule-card{padding:12px}#modify-schedule .schedule-toolbar h2{font-size:20px}#modify-schedule .schedule-actions button{padding:9px 10px}}
   @media(max-width:600px){#modify-staff-panel .staffgrid,#modify-job-api .api-grid{grid-template-columns:1fr}#modify-job-api .api-wide{grid-column:auto}#modify-staff-panel{inset:3% 3%}}
   `;
