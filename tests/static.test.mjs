@@ -144,4 +144,6 @@ test("shared workforce and job photos use existing D1 storage without paid R2 bi
   assert.match(html, /Team member photo/);
   assert.match(html, /data:image/);
 });
-\nassert.match(app, /calendar-selected-day/);\nassert.match(app, /calendar-date-heading/);\n
+
+assert.match(app, /calendar-selected-day/);
+assert.match(app, /calendar-date-heading/);
