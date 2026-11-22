@@ -99,10 +99,12 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
   assert.match(worker, /schedule: "schedule"/);
   assert.match(app, /async function renderWorkforceSchedule/);
   assert.match(app, /class="calendar-month-grid"/);
-  assert.match(app, /Monthly calendar/);
-  assert.doesNotMatch(app, /api\/modules\/schedule\/records/);
-  assert.doesNotMatch(app, /Save allocation/);
-  assert.doesNotMatch(app, /Delete allocation/);
+  assert.match(app, /People, jobs and daily assignments/);
+  assert.match(app, /api\/modules\/schedule\/records/);
+  assert.match(app, /Save assignment/);
+  assert.match(app, /Delete/);
+  assert.match(app, /calendar_assignment/);
+  assert.match(app, /sch-people/);
 
 
 
