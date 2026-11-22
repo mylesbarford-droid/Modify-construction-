@@ -87,7 +87,7 @@ async function handleApi(request, env) {
   }
   if (request.method === "POST" && url.pathname === "/api/auth/login") {
     const input = await body(request);
-    const name = String(input?.name || "").trim().replace(/\\s+/g," ");
+    const name = String(input?.name || "").trim().replace(/\s+/g," ");
     if (!name || name.length > 100) return json({error:"Choose your name to continue."},400);
     const normalized = name.toLocaleLowerCase("en-GB");
     const isJay = normalized === "jay wilson", isDave = normalized === "dave hawes";
@@ -446,6 +446,12 @@ export default {
       try { return await handleApi(request, env); }
       catch (error) {
         console.error("MODIFY API error", error);
+        try {
+          if (env.DB) await env.DB.prepare("INSERT INTO audit_log (user_id, action, detail, created_at) VALUES (NULL, 'api_exception', ?, ?)")
+            .bind(url.pathname + ": " + String(error?.message || error).slice(0, 400), Math.floor(Date.now() / 1000)).run();
+        } catch (logError) {
+          console.error("MODIFY API diagnostic log failed", logError);
+        }
         return json({ error: "The request could not be completed." }, 500);
       }
     }
