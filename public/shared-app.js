@@ -143,6 +143,20 @@
     #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b!important;color:#fff!important;border-radius:50%!important}
     #modify-schedule .calendar-month-grid td.calendar-selected{background:#fff2e8!important;box-shadow:inset 0 0 0 2px #f36b0b!important}
   }
+  @media(max-width:700px){
+    #modify-schedule .schedule-scroll{background:#f2f3f5!important;padding:3px!important;border:1px solid #d8dce2!important;border-radius:10px!important}
+    #modify-schedule .calendar-month-grid{background:#eef0f3!important}
+    #modify-schedule .calendar-month-grid th{height:29px!important;background:#343941!important;color:#f7f8fa!important;border:2px solid #eef0f3!important;font-size:10px!important;letter-spacing:.02em!important}
+    #modify-schedule .calendar-month-grid td{height:54px!important;padding:2px!important;background:#f7f7f5!important;border:2px solid #eef0f3!important;border-radius:7px!important}
+    #modify-schedule .calendar-month-grid td:nth-child(6),#modify-schedule .calendar-month-grid td:nth-child(7){background:#f0f1f2!important}
+    #modify-schedule .calendar-month-grid td.calendar-empty{background:#e9ebee!important}
+    #modify-schedule .calendar-month-grid .calendar-day-number{width:19px!important;height:19px!important;background:#e5e8ec!important;color:#303640!important;border-radius:6px!important;font-size:10px!important}
+    #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b!important;color:white!important}
+    #modify-schedule .calendar-month-grid td.calendar-selected{background:#fff0e4!important;box-shadow:inset 0 0 0 2px #f36b0b!important}
+    #modify-schedule .calendar-assignment{background:#fce6d5!important;color:#713b18!important;border:0!important;border-left:3px solid #ed792b!important;border-radius:5px!important;padding:3px!important;margin:2px 0!important;max-width:100%!important;overflow:hidden!important;font-size:8px!important;line-height:1.05!important}
+    #modify-schedule .calendar-assignment strong{display:block!important;font-size:8px!important;line-height:1.1!important;white-space:normal!important;overflow-wrap:anywhere!important}
+    #modify-schedule .calendar-date-add{min-height:21px!important}
+  }
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
   const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
