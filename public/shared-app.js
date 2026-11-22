@@ -323,8 +323,22 @@
         error.textContent="";
         if(!isManager){try{const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name})});await enterWorkspace(d.user)}catch(e){error.textContent=e.message}}
         else{
-          pinArea.innerHTML='<label for="modify-manager-pin">Enter your 6-digit PIN</label><input id="modify-manager-pin" inputmode="numeric" autocomplete="current-password" maxlength="6" type="password" placeholder="6-digit PIN"><button type="button" id="modify-manager-enter">Continue</button>';
-          $("#modify-manager-enter").onclick=async()=>{try{const pin=$("#modify-manager-pin").value;const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name,pin})});await enterWorkspace(d.user)}catch(e){error.textContent=e.message}};
+          pinArea.innerHTML='<label for="modify-manager-pin">Temporary setup PIN (first sign-in)</label><input id="modify-manager-pin" inputmode="numeric" autocomplete="one-time-code" maxlength="6" type="password" placeholder="Temporary 6-digit PIN"><label for="modify-new-pin">Choose your own 6-digit PIN</label><input id="modify-new-pin" inputmode="numeric" autocomplete="new-password" maxlength="6" type="password" placeholder="New PIN"><label for="modify-confirm-pin">Confirm your new PIN</label><input id="modify-confirm-pin" inputmode="numeric" autocomplete="new-password" maxlength="6" type="password" placeholder="Enter new PIN again"><button type="button" id="modify-manager-enter">Set PIN and sign in</button><p style="font-size:12px;color:#b8b5ac">After setup, sign in with your own PIN only.</p>';
+          $("#modify-manager-enter").onclick=async()=>{
+            try{
+              const setupPin=$("#modify-manager-pin").value,newPin=$("#modify-new-pin").value,confirmPin=$("#modify-confirm-pin").value;
+              if(!/^\\d{6}$/.test(setupPin)||!/^\\d{6}$/.test(newPin)||newPin!==confirmPin){error.textContent="Enter the temporary PIN, then choose and confirm a six-digit PIN.";return}
+              const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name,setupPin,newPin,confirmPin})});await enterWorkspace(d.user);
+            }catch(e){
+              if((e.message||"").toLowerCase().includes("temporary setup pin")||(e.message||"").toLowerCase().includes("six-digit pin")){
+                error.textContent=e.message;
+              }else{
+                pinArea.innerHTML='<label for="modify-manager-return-pin">Your saved 6-digit PIN</label><input id="modify-manager-return-pin" inputmode="numeric" autocomplete="current-password" maxlength="6" type="password" placeholder="Your PIN"><button type="button" id="modify-manager-return">Sign in</button><p style="font-size:12px;color:#b8b5ac">If this is your first sign-in, use the temporary setup PIN above and set a new PIN.</p>';
+                $("#modify-manager-return").onclick=async()=>{try{const pin=$("#modify-manager-return-pin").value;const d=await api("/api/auth/login",{method:"POST",body:JSON.stringify({name,pin})});await enterWorkspace(d.user)}catch(err){error.textContent=err.message}};
+                error.textContent=e.message;
+              }
+            }
+          };
           $("#modify-manager-pin").focus();
         }
       });
