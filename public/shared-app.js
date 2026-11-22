@@ -311,7 +311,44 @@
   async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(!d?.user)d=await api("/api/auth/login",{method:"POST",body:"{}"});currentUser=d.user;if(!currentUser)throw new Error("Could not open company workspace");cover.remove();accountBar();await syncOperationalRegisters();if($("#crumb")?.textContent==="Dashboard")loadDashboardSchedule();if(window.current==="Workforce Job Calendar")renderWorkforceSchedule()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   let workforceScheduleRenderId=0;
+  async function renderWorkerMyWork(){
+    const body=$("#pagebody");if(!body)return;
+    const scheduleNav=document.querySelector('#nav button[data-page="Workforce Job Calendar"]');
+    if(scheduleNav)scheduleNav.innerHTML='<span class="ico">▦</span>My Work';
+    $("#title").textContent="My Work";$("#subtitle").textContent="Your shifts, site details and the team working with you";$("#crumb").textContent="My Work";
+    const add=$("#add");if(add)add.style.display="none";
+    body.innerHTML='<div id="modify-worker-work"><div class="worker-loading">Loading your shifts…</div></div>';
+    const panel=$("#modify-worker-work");
+    try{
+      const data=await api("/api/modules/schedule/records");
+      const today=new Date();today.setHours(0,0,0,0);
+      const dateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");
+      const todayKey=dateKey(today),endDate=new Date(today);endDate.setDate(endDate.getDate()+30);
+      const accountName=String(currentUser?.name||currentUser?.fullName||"").trim().toLowerCase();
+      const staffCode=String(currentUser?.staffCode||currentUser?.staff_code||"").trim().toLowerCase();
+      const items=(data.records||[]).filter(x=>{
+        const r=x.record||{},date=String(r.date||"");
+        if(r.type!=="calendar_assignment"||date<todayKey||date>dateKey(endDate))return false;
+        return (r.people||[]).some(p=>{
+          const name=String(p.name||"").trim().toLowerCase(),id=String(p.id||"").trim().toLowerCase();
+          return (accountName&&name===accountName)||(staffCode&&id===staffCode);
+        });
+      }).sort((a,b)=>String(a.record.date).localeCompare(String(b.record.date))||String(a.record.startTime||"").localeCompare(String(b.record.startTime||"")));
+      const styles='<style>#modify-worker-work{display:grid;gap:12px;color:#202938}#modify-worker-work .worker-intro{padding:16px;border-radius:13px;background:#202832;color:#fff}#modify-worker-work .worker-intro h2{margin:0 0 4px;font-size:19px}#modify-worker-work .worker-intro p{margin:0;color:#d9e0e7;font-size:13px}#modify-worker-work .worker-shift{padding:15px;border:1px solid #e0e4ea;border-radius:13px;background:#fff;box-shadow:0 3px 12px rgba(20,27,38,.04)}#modify-worker-work .worker-shift-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}#modify-worker-work .worker-date{font-size:13px;font-weight:800;color:#b84d08}#modify-worker-work .worker-time{font-size:14px;font-weight:800;color:#202938;background:#fff3e9;border-radius:8px;padding:7px 10px}#modify-worker-work h3{margin:8px 0 3px;font-size:18px}#modify-worker-work .worker-jobno{font-size:12px;color:#687386}#modify-worker-work .worker-site{margin-top:10px;padding-top:10px;border-top:1px solid #edf0f3;font-size:13px}#modify-worker-work .worker-team{margin-top:10px;font-size:13px}#modify-worker-work .worker-team ul{margin:6px 0 0;padding-left:20px;display:grid;gap:4px}#modify-worker-work .worker-notes{white-space:pre-wrap;margin-top:12px;padding:11px;border-radius:9px;background:#fff8f1;border-left:3px solid #ed792b;font-size:13px;line-height:1.45}#modify-worker-work .worker-empty{padding:18px;border:1px solid #e0e4ea;border-radius:12px;background:#fff;line-height:1.5}#modify-worker-work .worker-empty strong{display:block;margin-bottom:5px}#modify-worker-work .worker-section{font-size:14px;margin:8px 0 0;color:#687386;font-weight:800}@media(max-width:600px){#modify-worker-work .worker-shift{padding:12px}#modify-worker-work .worker-shift h3{font-size:16px}}</style>';
+      if(!items.length){
+        panel.innerHTML=styles+'<div class="worker-intro"><h2>Hi '+esc(currentUser?.name||"there")+'</h2><p>Your work schedule at a glance.</p></div><div class="worker-empty"><strong>No shifts assigned to you yet</strong>Your upcoming shifts will appear here once your manager adds you to the workforce calendar. If you think a shift is missing, ask your manager to check that your staff profile name matches your Workforce record.</div>';
+        return;
+      }
+      const jobFor=x=>sharedJobs.find(j=>String(j.job_number||"")===String(x.jobNumber||""));
+      const dateLabel=value=>{const d=new Date(value+"T00:00:00"),tomorrow=new Date(today);tomorrow.setDate(tomorrow.getDate()+1);const key=dateKey(d);const day=key===todayKey?"Today":key===dateKey(tomorrow)?"Tomorrow":d.toLocaleDateString("en-GB",{weekday:"long"});return day+" · "+d.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})};
+      panel.innerHTML=styles+'<div class="worker-intro"><h2>Hi '+esc(currentUser?.name||"there")+'</h2><p>Here are your shifts for the next 30 days.</p></div><div class="worker-section">YOUR UPCOMING SHIFTS · '+items.length+'</div>'+items.map(item=>{
+        const r=item.record||{},job=jobFor(item),team=(r.people||[]).map(p=>'<li><strong>'+esc(p.name||"Team member")+'</strong>'+(p.role?' · '+esc(p.role):"")+'</li>').join("");
+        return '<article class="worker-shift"><div class="worker-shift-top"><span class="worker-date">'+esc(dateLabel(r.date))+'</span><span class="worker-time">'+esc(r.startTime||"08:00")+' – '+esc(r.endTime||"16:00")+'</span></div><h3>'+esc(job?.project_name||r.jobName||"Job / site")+'</h3><div class="worker-jobno">'+esc(item.jobNumber||"")+'</div>'+(job?.site_address?'<div class="worker-site"><strong>📍 Site address</strong><br>'+esc(job.site_address)+'</div>':'')+'<div class="worker-team"><strong>Who is on the job</strong><ul>'+team+'</ul></div>'+(r.notes?'<div class="worker-notes"><strong>Site instructions</strong><br>'+esc(r.notes)+'</div>':'')+'</article>';
+      }).join("");
+    }catch(e){panel.innerHTML='<div class="worker-empty"><strong>Could not load your shifts</strong>'+esc(e.message||"Please try again in a moment.")+'</div>'}
+  }
   async function renderWorkforceSchedule(anchor=new Date()){
+    if(currentUser?.role==="employee"){await renderWorkerMyWork();return}
  const body=$("#pagebody");if(!body)return;
  const month=new Date(anchor.getFullYear(),anchor.getMonth(),1),y=month.getFullYear(),m=month.getMonth();
  const first=new Date(y,m,1),startDay=new Date(y,m,1-((first.getDay()+6)%7)),dayKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-"),today=dayKey(new Date());
@@ -441,6 +478,7 @@ window.renderWorkforceSchedule=renderWorkforceSchedule;
   // Show upcoming saved shifts on the front dashboard.
   async function loadDashboardSchedule(){
     const body=$("#pagebody");if(!body||$("#crumb")?.textContent!=="Dashboard"||$("#dashboard-shifts"))return;
+    if(currentUser?.role==="employee"){renderWorkerMyWork();return}
     const card=document.createElement("section");card.className="api-card dashboard-shifts";card.id="dashboard-shifts";
     card.innerHTML='<div class="dashboard-shifts-head"><div><h2>Upcoming shifts</h2><p>Who is working and where</p></div><button type="button" id="dashboard-open-calendar">Open calendar →</button></div><div id="dashboard-shift-list">Loading shifts…</div>';
     const quick=body.querySelector(".quick-access-card");if(quick)quick.before(card);else body.appendChild(card);
