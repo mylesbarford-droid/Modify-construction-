@@ -20,6 +20,8 @@
 .brand{padding:0 5px!important}.modify-logo{display:block;width:100%;max-width:190px;height:auto;object-fit:contain}.brand{min-height:46px}.user .avatar{display:none!important}
 </style>
 
+<style id="modify-logo-home-click">.top-modify-logo,.modify-logo{cursor:pointer!important}</style>
+
 <style id="modify-black-gold-theme">
 :root{--gold:#c6a34a;--gold-light:#e0c477;--ink:#090a0c;--ink-soft:#15171b;--panel:#1c1e23;--line:#353840;--muted:#a5a8ae}
 body{background:#090a0c!important;color:#f4f1e8!important}
@@ -779,8 +781,10 @@ renderV2();
  document.addEventListener("click",function(e){
   var nav=e.target.closest("#nav button[data-page]");
   var tile=e.target.closest("[data-goto]");
+  var logo=e.target.closest(".top-modify-logo,.modify-logo");
   if(nav){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();go(nav.dataset.page)}
   else if(tile){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();go(tile.dataset.goto)}
+  else if(logo){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();go("Dashboard")}
  },true);
 })();
 </script>
