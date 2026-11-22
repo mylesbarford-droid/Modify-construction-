@@ -82,15 +82,18 @@ test("MODIFY is installable as a PWA without caching private company data", () =
   assert.match(serviceWorker, /MODIFY is offline/);
 });
 
-test("open company access creates an administrator session without a password", () => {
-  assert.match(worker, /Owner-requested open access/);
-  assert.match(worker, /MODIFY_SHARED/);
+test("named sign-in gives Jay and Dave protected editor accounts and staff read-only access", () => {
+  assert.match(worker, /api\/auth\/roster/);
+  assert.match(worker, /Jay Wilson/);
+  assert.match(worker, /Dave Hawes/);
+  assert.match(worker, /role = "administrator"/);
+  assert.match(worker, /role = "employee"/);
+  assert.match(worker, /modify_session/);
   assert.match(app, /api\/auth\/login/);
-  assert.doesNotMatch(app, /name="password"/);
-  assert.doesNotMatch(app, /password:f\.get\("password"\)/);
-  assert.doesNotMatch(app, /name="staffCode"/);
-  assert.doesNotMatch(app, /name="pin"/);
-  assert.doesNotMatch(app, /modify-staff-open/);
+  assert.match(app, /login-name-grid/);
+  assert.match(app, /modify-manager-pin/);
+  assert.match(app, /role==="administrator"\?"Editor":"View only"/);
+  assert.doesNotMatch(worker, /Owner-requested open access/);
 });
 
 test("workforce schedule is shared, job-linked and editable with role-based access", () => {
