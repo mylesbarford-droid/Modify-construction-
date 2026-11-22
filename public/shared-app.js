@@ -66,7 +66,7 @@
   #modify-schedule .calendar-month-grid td{height:112px;background:#fff;position:relative}
   #modify-schedule .calendar-month-grid td.outside-month{background:#f5f6f8;color:#a4aab4}
   #modify-schedule .calendar-month-grid .calendar-day-number{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;font-weight:650}
-  #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b;color:#fff}
+  #modify-schedule .calendar-month-grid td.calendar-today .calendar-day-number{background:#f36b0b;color:#fff}\n  #modify-schedule .calendar-hint{font-size:13px;color:#687386;margin:4px 0 12px}\n  #modify-schedule .calendar-month-grid td{padding:6px;vertical-align:top}\n  #modify-schedule .calendar-date-add{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:#202938;padding:0 0 5px;text-align:left}\n  #modify-schedule .calendar-add-mark{font-size:10px;color:#b84d08}\n  #modify-schedule .calendar-assignment{display:block;width:100%;text-align:left;border:1px solid #f2c49f;border-left:3px solid #f36b0b;border-radius:6px;background:#fff4eb;color:#202938;padding:5px;margin:3px 0;font-size:10px;line-height:1.3;overflow-wrap:anywhere}\n  #modify-schedule .calendar-assignment strong,#modify-schedule .calendar-assignment span,#modify-schedule .calendar-assignment small{display:block}\n  #modify-schedule .calendar-assignment strong{color:#a94708;font-size:10px}\n  #modify-schedule #schedule-editor[hidden]{display:none}\n  #modify-schedule .schedule-form small{font-size:10px;color:#687386}\n  @media(max-width:700px){#modify-schedule .calendar-month-grid{min-width:760px}#modify-schedule .calendar-month-grid td{height:120px}}
   @media(max-width:700px){#modify-schedule .schedule-form{grid-template-columns:1fr}#modify-schedule .wide{grid-column:auto}#modify-schedule .schedule-card{padding:12px}#modify-schedule .schedule-toolbar h2{font-size:20px}#modify-schedule .schedule-actions button{padding:9px 10px}}
   @media(max-width:600px){#modify-staff-panel .staffgrid,#modify-job-api .api-grid{grid-template-columns:1fr}#modify-job-api .api-wide{grid-column:auto}#modify-staff-panel{inset:3% 3%}}
   `;
@@ -222,21 +222,49 @@
   async function boot(){try{let d;try{d=await api("/api/auth/me")}catch{}if(!d?.user)d=await api("/api/auth/login",{method:"POST",body:"{}"});currentUser=d.user;if(!currentUser)throw new Error("Could not open company workspace");cover.remove();accountBar();if(window.current==="Workforce Job Calendar")renderWorkforceSchedule();await syncOperationalRegisters()}catch(err){cover.style.display="grid";$("#modify-auth-error").textContent=err.message||"Could not connect. Refresh to try again."}}
   function localJobs(){try{const data=JSON.parse(localStorage.getItem("modifyRecordsV2")||"{}");return Array.isArray(data["Jobs & Sites"])?data["Jobs & Sites"]:[]}catch{return []}}
   let workforceScheduleRenderId=0;
-  function defaultScheduleAnchor(){const now=new Date();if(now.getDay()===0){const next=new Date(now);next.setDate(next.getDate()+1);return next}return now}
   async function renderWorkforceSchedule(anchor=new Date()){
  const body=$("#pagebody");if(!body)return;
  const month=new Date(anchor.getFullYear(),anchor.getMonth(),1),y=month.getFullYear(),m=month.getMonth();
  const first=new Date(y,m,1),startDay=new Date(y,m,1-((first.getDay()+6)%7)),dayKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-"),today=dayKey(new Date());
  const label=month.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
- $("#title").textContent="Calendar";$("#subtitle").textContent="Monthly calendar";$("#crumb").textContent="Calendar";
+ $("#title").textContent="Calendar";$("#subtitle").textContent="People, jobs and daily assignments";$("#crumb").textContent="Calendar";
  const add=$("#add");if(add)add.style.display="none";
- body.innerHTML='<section class="schedule-card" id="modify-schedule"><div class="schedule-toolbar"><div><h2>Calendar</h2><p id="calendar-month"></p></div><div class="schedule-actions"><button id="calendar-prev" type="button">← Previous</button><button id="calendar-today" class="primary" type="button">Today</button><button id="calendar-next" type="button">Next →</button></div></div><div class="schedule-scroll"><table class="calendar-month-grid"><thead><tr>'+["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody id="calendar-days"></tbody></table></div></section>';
+ body.innerHTML='<section class="schedule-card" id="modify-schedule"><div class="schedule-toolbar"><div><h2>Workforce calendar</h2><p id="calendar-month"></p></div><div class="schedule-actions"><button id="calendar-prev" type="button">← Previous</button><button id="calendar-today" class="primary" type="button">Today</button><button id="calendar-next" type="button">Next →</button></div></div><p class="calendar-hint">Select any day to add a job and assign people. Your saved assignments appear in that day.</p><div class="schedule-scroll"><table class="calendar-month-grid"><thead><tr>'+["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody id="calendar-days"></tbody></table></div><section id="schedule-editor" hidden><h3 id="schedule-editor-title">Add people to a day</h3><div id="schedule-message"></div><div class="schedule-form"><label>Date<input id="sch-date" type="date" required></label><label>Job / project<select id="sch-job"><option value="">Choose a job</option>'+jobsOptions(sharedJobs)+'</select></label><label class="wide">People<select id="sch-people" multiple size="5"></select><small>Hold Ctrl (or tap multiple options on mobile where supported) to select more than one person.</small></label><label>Start time<input id="sch-start" type="time" value="08:00"></label><label>Finish time<input id="sch-end" type="time" value="16:00"></label><label class="wide">Notes<textarea id="sch-notes" rows="2" placeholder="Optional site instructions"></textarea></label></div><div class="api-actions"><button id="sch-cancel" type="button">Cancel</button><button id="sch-delete" type="button" hidden>Delete</button><button id="sch-save" type="button">Save assignment</button></div></section></section>';
  $("#calendar-month").textContent=label;
  $("#calendar-prev").onclick=()=>renderWorkforceSchedule(new Date(y,m-1,1));
  $("#calendar-next").onclick=()=>renderWorkforceSchedule(new Date(y,m+1,1));
  $("#calendar-today").onclick=()=>renderWorkforceSchedule(new Date());
+ const editor=$("#schedule-editor"),message=$("#schedule-message"),dateInput=$("#sch-date"),jobInput=$("#sch-job"),peopleInput=$("#sch-people"),startInput=$("#sch-start"),endInput=$("#sch-end"),notesInput=$("#sch-notes");
+ let records=[],people=[];
+ const byId=new Map();
+ function openEditor(date,record=null){
+  editor.hidden=false;dateInput.value=date;jobInput.value=record?.jobNumber||"";startInput.value=record?.record?.startTime||"08:00";endInput.value=record?.record?.endTime||"16:00";notesInput.value=record?.record?.notes||"";
+  const chosen=new Set((record?.record?.people||[]).map(p=>String(p.id)));
+  [...peopleInput.options].forEach(o=>o.selected=chosen.has(o.value));
+  editor.dataset.recordId=record?.id||"";$("#schedule-editor-title").textContent=record?"Edit daily assignment":"Add people to "+date;
+  $("#sch-delete").hidden=!record;message.textContent="";
+  editor.scrollIntoView({behavior:"smooth",block:"nearest"});
+ }
+ $("#sch-cancel").onclick=()=>{editor.hidden=true};
+ try{
+  const [scheduleData,workforceData]=await Promise.all([api("/api/modules/schedule/records"),api("/api/modules/workforce/records")]);
+  records=(scheduleData.records||[]).filter(x=>x.record&&x.record.type==="calendar_assignment");
+  people=(workforceData.records||[]).map(x=>x.record||{}).filter(p=>p["Full name"]||p.fullName||p.name).map((p,i)=>({id:String(p.id||p["Staff code"]||p.staffCode||i),name:String(p["Full name"]||p.fullName||p.name),role:String(p["Job role"]||p["Job role / trade"]||"")})).sort((a,b)=>a.name.localeCompare(b.name));
+  peopleInput.innerHTML=people.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name+(p.role?" — "+p.role:""))+'</option>').join("");
+ }catch(e){message.textContent="Could not load staff or assignments: "+e.message}
  const cells=Array.from({length:42},(_,i)=>{const d=new Date(startDay);d.setDate(startDay.getDate()+i);return d});
- $("#calendar-days").innerHTML=Array.from({length:6},(_,w)=>'<tr>'+cells.slice(w*7,w*7+7).map(d=>{const k=dayKey(d);return '<td class="calendar-day'+(d.getMonth()!==m?' outside-month':'')+(k===today?' calendar-today':'')+'"><span class="calendar-day-number">'+d.getDate()+'</span></td>'}).join("")+'</tr>').join("");
+ $("#calendar-days").innerHTML=Array.from({length:6},(_,w)=>'<tr>'+cells.slice(w*7,w*7+7).map(d=>{const k=dayKey(d),items=records.filter(x=>String(x.record.date)===k);return '<td class="calendar-day'+(d.getMonth()!==m?' outside-month':'')+(k===today?' calendar-today':'')+'" data-date="'+k+'"><button type="button" class="calendar-date-add" data-add-date="'+k+'"><span class="calendar-day-number">'+d.getDate()+'</span><span class="calendar-add-mark">+ Add</span></button>'+items.map(item=>'<button type="button" class="calendar-assignment" data-record-id="'+esc(item.id)+'"><strong>'+esc(item.jobNumber||"No job")+'</strong><span>'+esc((item.record.people||[]).map(p=>p.name).join(", ")||"No people assigned")+'</span><small>'+esc(item.record.startTime||"08:00")+'–'+esc(item.record.endTime||"16:00")+'</small></button>').join("")+'</td>'}).join("")+'</tr>').join("");
+ body.querySelectorAll("[data-add-date]").forEach(btn=>btn.onclick=()=>openEditor(btn.dataset.addDate));
+ body.querySelectorAll("[data-record-id]").forEach(btn=>btn.onclick=()=>{const item=records.find(x=>String(x.id)===btn.dataset.recordId);if(item)openEditor(item.record.date,item)});
+ $("#sch-save").onclick=async()=>{
+  const selected=[...peopleInput.selectedOptions].map(o=>people.find(p=>p.id===o.value)).filter(Boolean),job=sharedJobs.find(j=>String(j.job_number)===jobInput.value);
+  if(!dateInput.value||!jobInput.value||!job||!selected.length){message.textContent="Choose a date, a job and at least one person.";return}
+  if(!startInput.value||!endInput.value||endInput.value<=startInput.value){message.textContent="Enter a valid start and finish time.";return}
+  const id=editor.dataset.recordId||("cal-"+crypto.randomUUID()),record={type:"calendar_assignment",date:dateInput.value,jobName:job.project_name,people:selected,startTime:startInput.value,endTime:endInput.value,notes:notesInput.value};
+  try{await api("/api/modules/schedule/records",{method:"POST",body:JSON.stringify({id,jobNumber:jobInput.value,record})});await renderWorkforceSchedule(new Date(y,m,1))}
+  catch(e){message.textContent="Could not save assignment: "+e.message}
+ };
+ $("#sch-delete").onclick=async()=>{const id=editor.dataset.recordId;if(!id||!confirm("Delete this day's assignment?"))return;try{await api("/api/modules/schedule/records/"+encodeURIComponent(id),{method:"DELETE"});await renderWorkforceSchedule(new Date(y,m,1))}catch(e){message.textContent="Could not delete assignment: "+e.message}};
 }
 window.renderWorkforceSchedule=renderWorkforceSchedule;
   function jobsOptions(jobs){return (jobs||[]).map(j=>{const n=String(j.job_number||"");const name=String(j.project_name||"");return '<option value="'+esc(n)+'">'+esc(n+" — "+name)+'</option>'}).join("")}
