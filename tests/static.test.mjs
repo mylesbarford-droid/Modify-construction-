@@ -118,7 +118,7 @@ test("workforce schedule is shared, job-linked and editable with role-based acce
   assert.match(app, /Previous/);
   assert.match(app, /calendar-today/);
   assert.match(app, /min-width:0;width:100%;table-layout:fixed/);
-  assert.match(app, /content:"Mon"/);
+  for (const day of ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]) assert.match(app, new RegExp(`content:"${day}"`));
   assert.match(app, /calendar-assignment span,#modify-schedule \.calendar-assignment small/);
 });
 
