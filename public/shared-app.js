@@ -244,8 +244,17 @@
       workers=canEdit?(results[1].status==="fulfilled"?(results[1].value.records||[]).map(x=>({id:String(x.id),name:x.record?.["Full name"]||x.record?.name||"Unnamed worker",role:x.record?.["Job role / trade"]||x.record?.["Job role"]||"",status:x.record?.["Employment status"]||"Employed"})).filter(x=>x.name!=="Unnamed worker"&&!/left|inactive|terminated/i.test(String(x.status))):[]):[{id:String(currentUser.id),name:currentUser.name||"My schedule",role:""}];
       if(canEdit&&results[1].status==="rejected")loadErrors.push("Workforce: "+results[1].reason.message);
       if(canEdit&&!workers.length){try{const accountData=await api("/api/auth/users");workers=(accountData.users||[]).filter(u=>u.active!==0).map(u=>({id:String(u.id),name:u.name||"Team member",role:u.role||""}))}catch(e){loadErrors.push("Staff list: "+e.message)}}
-      if(results[2].status==="fulfilled")assignments=(results[2].value.records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||"")}));
+      if(results[2].status==="fulfilled")assignments=(results[2].value.records||[]).map(x=>({...x.record,id:String(x.id),workerId:String(x.record?.workerId||""),jobNumber:String(x.jobNumber||x.record?.jobNumber||""),date:String(x.record?.date||"")}));
       else loadErrors.push("Existing allocations: "+results[2].reason.message);
+      // Never hide a saved allocation just because the Workforce register is temporarily
+      // empty or a worker has since been renamed/removed. Build visible calendar rows
+      // from the saved allocation itself as a final fallback.
+      const knownWorkerIds=new Set(workers.map(w=>String(w.id)));
+      for(const allocation of assignments){
+        if(!allocation.workerId||knownWorkerIds.has(allocation.workerId))continue;
+        workers.push({id:allocation.workerId,name:allocation.workerName||"Unlisted worker",role:allocation.workerRole||"From saved allocation",status:"Employed"});
+        knownWorkerIds.add(allocation.workerId);
+      }
       if(renderId!==workforceScheduleRenderId||!body.isConnected)return;
       if(loadErrors.length)message.textContent="Some calendar data could not load. "+loadErrors.join(" · ");
     }catch(e){if(renderId===workforceScheduleRenderId&&grid?.isConnected){message.textContent="Calendar data is temporarily unavailable: "+e.message+" The weekly calendar is still displayed."; }return}
