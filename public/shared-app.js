@@ -157,6 +157,7 @@
     #modify-schedule .calendar-assignment strong{display:block!important;font-size:8px!important;line-height:1.1!important;white-space:normal!important;overflow-wrap:anywhere!important}
     #modify-schedule .calendar-date-add{min-height:21px!important}
   }
+  @media(max-width:700px){#modify-schedule .calendar-month-grid th{color:transparent!important;font-size:0!important}#modify-schedule .calendar-month-grid th:after{color:#f7f8fa!important;font-size:11px!important;visibility:visible!important}}
   `;
   const style=document.createElement("style");style.textContent=css;document.head.appendChild(style);
   const cover=document.createElement("div");cover.id="modify-auth-cover";cover.innerHTML='<div class="authbox"><img class="auth-logo" src="/logo.svg" alt="MODIFY Construction"><p>Opening company workspace…</p><div id="modify-auth-error" role="alert"></div></div>';
