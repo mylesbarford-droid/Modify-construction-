@@ -277,7 +277,7 @@
  let records=[],people=[];
  const byId=new Map();
  function openEditor(date,record=null){
-  editor.hidden=false;dateInput.value=date;repeatUntil.value=date;editor.querySelectorAll(".schedule-weekday input").forEach(x=>x.checked=Number(x.value)===new Date(date+"T00:00:00").getDay());$("#schedule-repeat").hidden=!!record;jobInput.value=record?.jobNumber||"";startInput.value=record?.record?.startTime||"08:00";endInput.value=record?.record?.endTime||"16:00";notesInput.value=record?.record?.notes||"";
+  editor.hidden=false;dateInput.value=date;const repeatDefault=new Date(date+"T00:00:00");repeatDefault.setDate(repeatDefault.getDate()+27);repeatUntil.value=record?date:[repeatDefault.getFullYear(),String(repeatDefault.getMonth()+1).padStart(2,"0"),String(repeatDefault.getDate()).padStart(2,"0")].join("-");editor.querySelectorAll(".schedule-weekday input").forEach(x=>x.checked=Number(x.value)===new Date(date+"T00:00:00").getDay());$("#schedule-repeat").hidden=!!record;jobInput.value=record?.jobNumber||"";startInput.value=record?.record?.startTime||"08:00";endInput.value=record?.record?.endTime||"16:00";notesInput.value=record?.record?.notes||"";
   const chosen=new Set((record?.record?.people||[]).map(p=>String(p.id)));
   peopleList.querySelectorAll("input[type=checkbox]").forEach(o=>o.checked=chosen.has(o.value));
   editor.dataset.recordId=record?.id||"";$("#schedule-editor-title").textContent=record?"Edit daily assignment":"Add people to "+date;
