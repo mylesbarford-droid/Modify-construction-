@@ -1,5 +1,5 @@
-const CACHE_NAME = "modify-app-shell-v31";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/logo.svg", "/icons/modify.svg", "/shared-app.js?v=143"];
+const CACHE_NAME = "modify-app-shell-v32";
+const APP_SHELL = ["/", "/manifest.webmanifest", "/logo.svg", "/icons/modify.svg", "/shared-app.js?v=144"];
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
